@@ -5,6 +5,7 @@ import { RollupDetailView } from '@/views/RollupDetailView'
 import { StateView } from '@/views/StateView'
 import { SettingsView } from '@/views/SettingsView'
 import { DecisionsView } from '@/views/DecisionsView'
+import { MorningView } from '@/views/MorningView'
 import { useUIStore } from '@/store/uiStore'
 
 function ViewRouter() {
@@ -21,6 +22,8 @@ function ViewRouter() {
       return <DecisionsView />
     case 'settings':
       return <SettingsView />
+    case 'morning':
+      return <MorningView />
     default:
       return <TimelineView />
   }

@@ -31,8 +31,8 @@ export function extractSummary(body: string, maxLines = 3): string {
 
 export function parseDecisionTraces(body: string): Array<{id: string, title: string, input: string, constraint: string, tradeoff: string, decision: string}> {
   const decisions: Array<{id: string, title: string, input: string, constraint: string, tradeoff: string, decision: string}> = []
-  // Match both "#### DT-1: Title" and "### D1: Title" formats
-  const dtRegex = /#{2,4}\s*(DT-?\d+|D\d+):\s*(.+?)(?:\s*\(.*?\))?\n([\s\S]*?)(?=\n#{2,4}\s|$)/gi
+  // Match "#### DT-1: Title", "### D1: Title", and "### DT-20260310-1: Title" formats
+  const dtRegex = /#{2,4}\s*(DT-\d{8}-\d+|DT-?\d+|D\d+):\s*(.+?)(?:\s*\(.*?\))?\n([\s\S]*?)(?=\n#{2,4}\s|$)/gi
   let match
   while ((match = dtRegex.exec(body)) !== null) {
     const block = match[3]

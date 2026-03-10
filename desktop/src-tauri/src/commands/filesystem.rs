@@ -183,3 +183,30 @@ pub fn read_stream(project: String) -> FileContent {
     let content = fs::read_to_string(&path).unwrap_or_default();
     FileContent { content }
 }
+
+#[tauri::command]
+pub fn list_mornings(project: String) -> Vec<RollupFile> {
+    let morning_dir = workspace_dir(&project).join("mornings");
+    let mut mornings = Vec::new();
+
+    let mut files: Vec<_> = fs::read_dir(&morning_dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            name.ends_with(".log") || name.ends_with(".md")
+        })
+        .collect();
+
+    files.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+
+    for entry in files {
+        let filename = entry.file_name().to_string_lossy().to_string();
+        if let Ok(content) = fs::read_to_string(entry.path()) {
+            mornings.push(RollupFile { filename, content });
+        }
+    }
+
+    mornings
+}

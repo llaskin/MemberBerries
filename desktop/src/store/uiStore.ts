@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ViewId = 'timeline' | 'state' | 'decisions' | 'settings' | 'rollup-detail'
+export type ViewId = 'timeline' | 'state' | 'decisions' | 'settings' | 'rollup-detail' | 'morning'
 
 interface UIStore {
   sidebarOpen: boolean

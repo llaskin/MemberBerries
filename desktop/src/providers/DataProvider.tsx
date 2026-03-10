@@ -4,6 +4,7 @@ import type { Project } from '@/lib/types'
 export interface Backend {
   getProjects(): Promise<Project[]>
   getRollups(project: string): Promise<Array<{ filename: string; content: string }>>
+  getMornings(project: string): Promise<Array<{ filename: string; content: string }>>
   getState(project: string): Promise<string>
   getConfig(project: string): Promise<string>
   getStream(project: string): Promise<string>
@@ -34,6 +35,11 @@ function createFetchBackend(): Backend {
       if (!res.ok) throw new Error(`Failed to load rollups (${res.status})`)
       return res.json()
     },
+    async getMornings(project: string) {
+      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/mornings`)
+      if (!res.ok) return []
+      return res.json()
+    },
     async getState(project: string) {
       const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/state`)
       const data = await res.json()
@@ -61,6 +67,9 @@ async function createTauriBackend(): Promise<Backend> {
     },
     async getRollups(project: string) {
       return invoke<Array<{ filename: string; content: string }>>('list_rollups', { project })
+    },
+    async getMornings(project: string) {
+      return invoke<Array<{ filename: string; content: string }>>('list_mornings', { project })
     },
     async getState(project: string) {
       const result = await invoke<{ content: string }>('read_state', { project })
@@ -96,6 +105,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const proxy: Backend = {
       getProjects: () => getBackend().then(b => b.getProjects()),
       getRollups: (p) => getBackend().then(b => b.getRollups(p)),
+      getMornings: (p) => getBackend().then(b => b.getMornings(p)),
       getState: (p) => getBackend().then(b => b.getState(p)),
       getConfig: (p) => getBackend().then(b => b.getConfig(p)),
       getStream: (p) => getBackend().then(b => b.getStream(p)),

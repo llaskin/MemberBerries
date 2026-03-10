@@ -119,6 +119,26 @@ export function axonDevApi(): Plugin {
             return
           }
 
+          // GET /api/axon/projects/:name/mornings
+          const morningsMatch = req.url.match(/^\/api\/axon\/projects\/([^/]+)\/mornings$/)
+          if (morningsMatch) {
+            const project = decodeURIComponent(morningsMatch[1])
+            const mDir = join(AXON_HOME, 'workspaces', project, 'mornings')
+            try {
+              const files = await readdir(mDir)
+              const logFiles = files.filter(f => f.endsWith('.log') || f.endsWith('.md')).sort().reverse()
+              const mornings = []
+              for (const file of logFiles) {
+                const content = await readFile(join(mDir, file), 'utf-8')
+                mornings.push({ filename: file, content })
+              }
+              res.end(JSON.stringify(mornings))
+            } catch {
+              res.end(JSON.stringify([]))
+            }
+            return
+          }
+
           res.statusCode = 404
           res.end(JSON.stringify({ error: 'Not found' }))
         } catch (e) {

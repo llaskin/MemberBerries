@@ -20,6 +20,7 @@ pub fn run() {
             commands::filesystem::read_state,
             commands::filesystem::read_config,
             commands::filesystem::read_stream,
+            commands::filesystem::list_mornings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

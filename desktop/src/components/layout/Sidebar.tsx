@@ -1,9 +1,10 @@
 import { useProjects } from '@/hooks/useProjects'
 import { useUIStore, type ViewId } from '@/store/uiStore'
-import { Layers, Clock, Brain, Settings, Search, Sun, Moon } from 'lucide-react'
+import { Layers, Clock, Brain, Settings, Search, Sun, Moon, Coffee } from 'lucide-react'
 
 const navItems: { id: ViewId; label: string; icon: typeof Clock }[] = [
   { id: 'timeline', label: 'Timeline', icon: Clock },
+  { id: 'morning', label: 'Morning', icon: Coffee },
   { id: 'state', label: 'State', icon: Layers },
   { id: 'decisions', label: 'Decisions', icon: Brain },
   { id: 'settings', label: 'Settings', icon: Settings },

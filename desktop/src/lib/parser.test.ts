@@ -153,6 +153,54 @@ describe('parseDecisionTraces', () => {
     expect(decisions[0].tradeoff).toBe('')
   })
 
+  it('parses DT-YYYYMMDD-N format decision traces', () => {
+    const body = `## Key Decisions
+
+### DT-20260310-1: Use Persistent Decision IDs
+
+**Input:** Decision IDs reset per rollup, making cross-rollup references impossible
+**Constraint:** Must not break existing DT-N format parsing
+**Tradeoff:** Longer IDs vs global uniqueness
+**Decision:** Use DT-YYYYMMDD-N format — date-scoped, no state needed
+
+### DT-20260310-2: Keep Parser Backward Compatible
+
+**Input:** Existing rollups use DT-1, DT-2 format
+**Constraint:** Can't rewrite historical rollups
+**Tradeoff:** Regex complexity vs clean cutover
+**Decision:** Accept both formats in parser regex`
+
+    const decisions = parseDecisionTraces(body)
+    expect(decisions).toHaveLength(2)
+
+    expect(decisions[0].id).toBe('DT-20260310-1')
+    expect(decisions[0].title).toBe('Use Persistent Decision IDs')
+    expect(decisions[0].input).toContain('reset per rollup')
+    expect(decisions[0].decision).toContain('DT-YYYYMMDD-N')
+
+    expect(decisions[1].id).toBe('DT-20260310-2')
+    expect(decisions[1].title).toBe('Keep Parser Backward Compatible')
+  })
+
+  it('parses mixed old and new decision ID formats', () => {
+    const body = `## Key Decisions
+
+### DT-1: Legacy Decision
+
+**Input:** Old format
+**Decision:** Kept for compatibility
+
+### DT-20260310-1: New Format Decision
+
+**Input:** New format
+**Decision:** Uses date-scoped ID`
+
+    const decisions = parseDecisionTraces(body)
+    expect(decisions).toHaveLength(2)
+    expect(decisions[0].id).toBe('DT-1')
+    expect(decisions[1].id).toBe('DT-20260310-1')
+  })
+
   it('returns empty array when no decisions', () => {
     const body = '## Summary\n\nJust a normal rollup.'
     expect(parseDecisionTraces(body)).toHaveLength(0)

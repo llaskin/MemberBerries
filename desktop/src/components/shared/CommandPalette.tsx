@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import { useUIStore } from '@/store/uiStore'
-import { Clock, Layers, Brain, Settings, Sun, Moon, FolderOpen } from 'lucide-react'
+import { Clock, Layers, Brain, Settings, Sun, Moon, FolderOpen, Coffee } from 'lucide-react'
 
 interface Command {
   id: string
@@ -26,6 +26,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const cmds: Command[] = [
       // Navigation
       { id: 'nav-timeline', label: 'Timeline', category: 'navigation', icon: Clock, action: () => { setView('timeline'); onClose() }, keywords: 'rollups history' },
+      { id: 'nav-morning', label: 'Morning', category: 'navigation', icon: Coffee, action: () => { setView('morning'); onClose() }, keywords: 'briefing session chat' },
       { id: 'nav-state', label: 'State', category: 'navigation', icon: Layers, action: () => { setView('state'); onClose() }, keywords: 'dashboard focus' },
       { id: 'nav-decisions', label: 'Decisions', category: 'navigation', icon: Brain, action: () => { setView('decisions'); onClose() }, keywords: 'traces search' },
       { id: 'nav-settings', label: 'Settings', category: 'navigation', icon: Settings, action: () => { setView('settings'); onClose() }, keywords: 'config preferences' },
