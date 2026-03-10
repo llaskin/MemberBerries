@@ -46,7 +46,7 @@ function DecisionCard({ dt }: { dt: { id: string; title: string; input: string; 
 }
 
 function RollupBody({ body }: { body: string }) {
-  // Render markdown sections as simple structured blocks
+  // Split into sections, but first extract fenced code blocks to protect them
   const sections = body.split(/\n(?=##\s)/).filter(s => s.trim())
 
   return (
@@ -66,54 +66,8 @@ function RollupBody({ body }: { body: string }) {
             {heading && (
               <h3 className="font-serif text-h4 text-ax-text-primary mb-2">{heading}</h3>
             )}
-            <div className="text-body text-ax-text-secondary leading-relaxed whitespace-pre-wrap">
-              {content.split('\n').map((line, j) => {
-                // Render bullet points
-                if (line.match(/^\s*[-*]\s/)) {
-                  const text = line.replace(/^\s*[-*]\s/, '')
-                  return (
-                    <div key={j} className="flex gap-2 mb-1">
-                      <span className="text-ax-text-tertiary shrink-0 mt-0.5">&bull;</span>
-                      <span>{renderInlineFormatting(text)}</span>
-                    </div>
-                  )
-                }
-                // Render checkboxes
-                if (line.match(/^\s*-\s*\[[ x>]\]/)) {
-                  const checked = line.includes('[x]')
-                  const text = line.replace(/^\s*-\s*\[[ x>]\]\s*/, '')
-                  return (
-                    <div key={j} className="flex gap-2 mb-1">
-                      <span className={`shrink-0 mt-0.5 ${checked ? 'text-ax-success' : 'text-ax-text-tertiary'}`}>
-                        {checked ? '✓' : '○'}
-                      </span>
-                      <span className={checked ? 'line-through text-ax-text-tertiary' : ''}>{renderInlineFormatting(text)}</span>
-                    </div>
-                  )
-                }
-                // Tables
-                if (line.includes('|') && !line.match(/^\s*\|?\s*-+/)) {
-                  const cells = line.split('|').filter(c => c.trim())
-                  if (cells.length > 0) {
-                    return (
-                      <div key={j} className="flex gap-4 font-mono text-small py-1 border-b border-ax-border-subtle">
-                        {cells.map((cell, k) => (
-                          <span key={k} className={k === 0 ? 'w-32 shrink-0 text-ax-text-tertiary' : 'flex-1'}>
-                            {renderInlineFormatting(cell.trim())}
-                          </span>
-                        ))}
-                      </div>
-                    )
-                  }
-                }
-                // Skip table separator lines
-                if (line.match(/^\s*\|?\s*-+/)) return null
-                // Regular text
-                if (line.trim()) {
-                  return <p key={j} className="mb-1">{renderInlineFormatting(line)}</p>
-                }
-                return <div key={j} className="h-2" />
-              })}
+            <div className="text-body text-ax-text-secondary leading-relaxed">
+              <RenderMarkdownBlock content={content} />
             </div>
           </div>
         )
@@ -122,21 +76,169 @@ function RollupBody({ body }: { body: string }) {
   )
 }
 
-function renderInlineFormatting(text: string) {
-  // Bold
-  const parts = text.split(/(\*\*[^*]+\*\*)/)
+/** Renders a block of markdown content with fenced code blocks, lists, tables, etc. */
+function RenderMarkdownBlock({ content }: { content: string }) {
+  // Split content into fenced code blocks and regular text
+  const parts = content.split(/(```[\s\S]*?```)/g)
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        // Fenced code block
+        if (part.startsWith('```') && part.endsWith('```')) {
+          const inner = part.slice(3, -3)
+          const firstNewline = inner.indexOf('\n')
+          const lang = firstNewline > 0 ? inner.slice(0, firstNewline).trim() : ''
+          const code = firstNewline > 0 ? inner.slice(firstNewline + 1) : inner
+          return (
+            <pre key={i} className="bg-ax-sunken border border-ax-border-subtle rounded-lg p-4 my-3 overflow-x-auto">
+              {lang && (
+                <div className="font-mono text-micro text-ax-text-tertiary mb-2 uppercase tracking-wider">{lang}</div>
+              )}
+              <code className="font-mono text-small text-ax-text-primary whitespace-pre">{code}</code>
+            </pre>
+          )
+        }
+
+        // Regular markdown content — render line by line
+        return <RenderLines key={i} text={part} />
+      })}
+    </>
+  )
+}
+
+function RenderLines({ text }: { text: string }) {
+  const lines = text.split('\n')
+  const elements: React.ReactNode[] = []
+
+  for (let j = 0; j < lines.length; j++) {
+    const line = lines[j]
+
+    // Subheadings (### or ####)
+    const subheadingMatch = line.match(/^#{3,4}\s+(.+)/)
+    if (subheadingMatch) {
+      elements.push(
+        <h4 key={j} className="font-serif text-body text-ax-text-primary font-medium mt-3 mb-1">{renderInlineFormatting(subheadingMatch[1])}</h4>
+      )
+      continue
+    }
+
+    // Checkboxes (must check before bullets)
+    if (line.match(/^\s*-\s*\[[ x>]\]/)) {
+      const checked = line.includes('[x]')
+      const text = line.replace(/^\s*-\s*\[[ x>]\]\s*/, '')
+      elements.push(
+        <div key={j} className="flex gap-2 mb-1">
+          <span className={`shrink-0 mt-0.5 ${checked ? 'text-ax-success' : 'text-ax-text-tertiary'}`}>
+            {checked ? '✓' : '○'}
+          </span>
+          <span className={checked ? 'line-through text-ax-text-tertiary' : ''}>{renderInlineFormatting(text)}</span>
+        </div>
+      )
+      continue
+    }
+
+    // Bullet points (with nesting support)
+    const bulletMatch = line.match(/^(\s*)[-*]\s+(.+)/)
+    if (bulletMatch) {
+      const indent = Math.floor(bulletMatch[1].length / 2)
+      elements.push(
+        <div key={j} className="flex gap-2 mb-1" style={{ paddingLeft: `${indent * 16}px` }}>
+          <span className="text-ax-text-tertiary shrink-0 mt-0.5">{indent > 0 ? '◦' : '•'}</span>
+          <span>{renderInlineFormatting(bulletMatch[2])}</span>
+        </div>
+      )
+      continue
+    }
+
+    // Numbered lists
+    const numMatch = line.match(/^(\s*)\d+\.\s+(.+)/)
+    if (numMatch) {
+      const indent = Math.floor(numMatch[1].length / 2)
+      const num = line.match(/^(\s*)(\d+)\./)?.[2] || '1'
+      elements.push(
+        <div key={j} className="flex gap-2 mb-1" style={{ paddingLeft: `${indent * 16}px` }}>
+          <span className="font-mono text-ax-text-tertiary shrink-0 w-5 text-right">{num}.</span>
+          <span>{renderInlineFormatting(numMatch[2])}</span>
+        </div>
+      )
+      continue
+    }
+
+    // Tables
+    if (line.includes('|') && !line.match(/^\s*\|?\s*[-:]+[-|: ]*$/)) {
+      const cells = line.split('|').filter(c => c.trim())
+      if (cells.length > 0) {
+        elements.push(
+          <div key={j} className="flex gap-4 font-mono text-small py-1 border-b border-ax-border-subtle">
+            {cells.map((cell, k) => (
+              <span key={k} className={k === 0 ? 'w-32 shrink-0 text-ax-text-tertiary' : 'flex-1'}>
+                {renderInlineFormatting(cell.trim())}
+              </span>
+            ))}
+          </div>
+        )
+        continue
+      }
+    }
+
+    // Skip table separator lines
+    if (line.match(/^\s*\|?\s*[-:]+[-|: ]*$/)) continue
+
+    // Horizontal rules
+    if (line.match(/^\s*[-*_]{3,}\s*$/)) {
+      elements.push(<hr key={j} className="border-ax-border my-3" />)
+      continue
+    }
+
+    // Regular text / blockquotes
+    if (line.trim()) {
+      const isQuote = line.match(/^>\s*(.*)/)
+      if (isQuote) {
+        elements.push(
+          <div key={j} className="border-l-2 border-ax-brand pl-3 py-0.5 mb-1 text-ax-text-secondary italic">
+            {renderInlineFormatting(isQuote[1])}
+          </div>
+        )
+      } else {
+        elements.push(<p key={j} className="mb-1">{renderInlineFormatting(line)}</p>)
+      }
+      continue
+    }
+
+    // Empty line
+    elements.push(<div key={j} className="h-2" />)
+  }
+
+  return <>{elements}</>
+}
+
+function renderInlineFormatting(text: string): React.ReactNode {
+  // Split on bold, italic, code, and links
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/)
   return parts.map((part, i) => {
+    // Bold
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={i} className="text-ax-text-primary font-medium">{part.slice(2, -2)}</strong>
     }
+    // Italic
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      return <em key={i}>{part.slice(1, -1)}</em>
+    }
     // Inline code
-    const codeParts = part.split(/(`[^`]+`)/)
-    return codeParts.map((cp, j) => {
-      if (cp.startsWith('`') && cp.endsWith('`')) {
-        return <code key={`${i}-${j}`} className="font-mono text-small bg-ax-sunken px-1.5 py-0.5 rounded">{cp.slice(1, -1)}</code>
-      }
-      return <span key={`${i}-${j}`}>{cp}</span>
-    })
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={i} className="font-mono text-small bg-ax-sunken px-1.5 py-0.5 rounded">{part.slice(1, -1)}</code>
+    }
+    // Links [text](url)
+    const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+    if (linkMatch) {
+      return <span key={i} className="text-ax-brand underline underline-offset-2">{linkMatch[1]}</span>
+    }
+    // Emoji risk flags
+    if (part.includes('⚠️')) {
+      return <span key={i}>{part}</span>
+    }
+    return <span key={i}>{part}</span>
   })
 }
 
