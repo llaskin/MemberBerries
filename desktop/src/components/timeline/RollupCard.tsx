@@ -1,9 +1,45 @@
-import type { RollupEpisode } from '@/lib/types'
+import type { RollupEpisode, EnergyLevel } from '@/lib/types'
+import { formatDate } from '@/lib/utils'
 
-const energyColors = {
-  low: 'bg-ax-energy-low',
-  medium: 'bg-ax-energy-medium',
-  high: 'bg-ax-energy-high',
+function EnergyDots({ energy }: { energy?: EnergyLevel }) {
+  if (!energy) return null
+  const filled = energy === 'low' ? 1 : energy === 'medium' ? 2 : 3
+  const colorMap = {
+    low: 'bg-ax-energy-low',
+    medium: 'bg-ax-energy-medium',
+    high: 'bg-ax-energy-high',
+  }
+  return (
+    <div className="flex gap-[3px] items-center">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className={`w-[5px] h-[5px] rounded-full ${
+            i < filled ? colorMap[energy] : 'bg-ax-border'
+          }`}
+        />
+      ))}
+    </div>
+  )
+}
+
+function Metrics({ frontmatter }: { frontmatter: RollupEpisode['frontmatter'] }) {
+  const items: string[] = []
+  if (frontmatter.commits != null) items.push(`${frontmatter.commits} commits`)
+  if (frontmatter.decisions != null) items.push(`${frontmatter.decisions} decisions`)
+  if (frontmatter.openLoops != null) items.push(`${frontmatter.openLoops} open`)
+  if (items.length === 0) return null
+
+  return (
+    <div className="font-mono text-small text-ax-text-tertiary">
+      {items.map((item, i) => (
+        <span key={item}>
+          {i > 0 && <span className="mx-2 opacity-40">&middot;</span>}
+          {item}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 export function RollupCard({ rollup, index }: { rollup: RollupEpisode; index: number }) {
@@ -11,22 +47,24 @@ export function RollupCard({ rollup, index }: { rollup: RollupEpisode; index: nu
 
   return (
     <article
-      className="bg-ax-elevated rounded-xl border border-ax-border p-6 hover:shadow-lg
-        transition-all duration-200 cursor-pointer group"
-      style={{ animationDelay: `${Math.min(index, 4) * 50}ms` }}
+      className="animate-fade-in-up bg-ax-elevated rounded-xl border border-ax-border p-6
+        cursor-pointer group
+        transition-all duration-200
+        hover:-translate-y-0.5
+        hover:border-l-[3px] hover:border-l-ax-brand
+        hover:shadow-[0_8px_30px_rgba(var(--ax-shadow-color),0.08)]"
+      style={{ animationDelay: `${Math.min(index, 5) * 60}ms` }}
     >
       {/* Date + Energy */}
       <div className="flex items-center justify-between mb-3">
-        <time className="font-mono text-small text-ax-text-tertiary">
-          {frontmatter.date}
+        <time className="font-mono text-small text-ax-text-tertiary tracking-wide">
+          {formatDate(frontmatter.date)}
         </time>
-        {frontmatter.energy && (
-          <span className={`w-2.5 h-2.5 rounded-full ${energyColors[frontmatter.energy]}`} />
-        )}
+        <EnergyDots energy={frontmatter.energy} />
       </div>
 
       {/* Headline */}
-      <h2 className="font-serif text-h3 text-ax-text-primary mb-3 group-hover:text-ax-brand transition-colors">
+      <h2 className="font-serif text-h3 text-ax-text-primary mb-3 group-hover:text-ax-brand transition-colors duration-200">
         {frontmatter.headline || (frontmatter.type === 'genesis' ? 'Genesis Rollup' : 'Daily Rollup')}
       </h2>
 
@@ -47,23 +85,13 @@ export function RollupCard({ rollup, index }: { rollup: RollupEpisode; index: nu
 
       {/* Summary */}
       {summary && (
-        <p className="text-body text-ax-text-secondary line-clamp-3 mb-4">
+        <p className="text-body text-ax-text-secondary leading-relaxed line-clamp-3 mb-4">
           {summary}
         </p>
       )}
 
       {/* Metrics */}
-      <div className="flex gap-6 font-mono text-small text-ax-text-tertiary">
-        {frontmatter.commits != null && (
-          <span>{frontmatter.commits} commits</span>
-        )}
-        {frontmatter.decisions != null && (
-          <span>{frontmatter.decisions} decisions</span>
-        )}
-        {frontmatter.openLoops != null && (
-          <span>{frontmatter.openLoops} open</span>
-        )}
-      </div>
+      <Metrics frontmatter={frontmatter} />
     </article>
   )
 }

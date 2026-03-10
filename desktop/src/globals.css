@@ -15,6 +15,9 @@
   --ax-brand-primary: #C8956C;
   --ax-border: #E5DDD3;
   --ax-shadow-color: 47, 36, 28;
+  --ax-ascii-char: #D8CFC4;
+  --ax-ascii-char-dim: #E8E0D6;
+  --ax-ascii-char-bright: #B8AA9C;
 }
 
 body {
@@ -28,4 +31,51 @@ body {
 ::selection {
   background: #C8956C33;
   color: var(--ax-text-primary);
+}
+
+/* Card entrance animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+/* Pulse for today's rollup dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Neural ASCII character classes */
+.ax-ascii-dim {
+  color: var(--ax-ascii-char-dim);
+}
+.ax-ascii-default {
+  color: var(--ax-ascii-char);
+}
+.ax-ascii-bright {
+  color: var(--ax-ascii-char-bright);
+}
+
+/* Content fade in */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out both;
 }
