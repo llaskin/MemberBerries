@@ -2,6 +2,7 @@
 # axon-morning — Conversational morning briefing + interactive session
 # Reads latest rollup + state, delivers briefing, then opens a chat
 # If you've been away, automatically runs a catch-up rollup first
+# Supports --all for multi-project briefing across active projects
 # Conversation is stored in ~/.axon/workspaces/{project}/mornings/
 
 set -euo pipefail
@@ -13,6 +14,145 @@ WORKSPACE="$AXON_HOME/workspaces/$PROJECT"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROTOCOL="$SCRIPT_DIR/../protocol.md"
 TODAY=$(date +%Y-%m-%d)
+ALL_PROJECTS="${ALL_PROJECTS:-}"
+
+# --- Helper: read status from config.yaml ---
+read_status() {
+    local config="$1"
+    if [[ -f "$config" ]]; then
+        grep "^status:" "$config" 2>/dev/null | awk '{print $2}' || echo "active"
+    else
+        echo "active"
+    fi
+}
+
+# --- Helper: get project headline from latest rollup ---
+read_headline() {
+    local ws="$1"
+    local latest_ep
+    latest_ep=$(find "$ws/episodes" -name "*.md" -print 2>/dev/null | sort -r | head -1)
+    if [[ -n "${latest_ep:-}" ]] && [[ -f "$latest_ep" ]]; then
+        grep "^headline:" "$latest_ep" 2>/dev/null | sed 's/^headline: *//' | sed 's/^"//' | sed 's/"$//' || echo ""
+    fi
+}
+
+# ====================================
+# MULTI-PROJECT MODE (--all)
+# ====================================
+if [[ -n "$ALL_PROJECTS" ]]; then
+    MORNING_DIR="$AXON_HOME/mornings"
+    mkdir -p "$MORNING_DIR"
+
+    SESSION_MARKER="$MORNING_DIR/${TODAY}.started"
+
+    # Resume existing multi-project session
+    if [[ -f "$SESSION_MARKER" ]]; then
+        echo "Resuming morning session (all projects)..."
+        echo ""
+        exec claude --continue \
+            2> >(tee -a "$MORNING_DIR/${TODAY}.log" >&2)
+    fi
+
+    # Gather context from all active projects
+    echo "Scanning active projects..."
+    echo ""
+
+    PROJECT_SUMMARIES=""
+    ACTIVE_COUNT=0
+
+    for ws in "$AXON_HOME/workspaces"/*/; do
+        [[ ! -d "$ws" ]] && continue
+        name=$(basename "$ws")
+        config="$ws/config.yaml"
+        state="$ws/state.md"
+
+        status=$(read_status "$config")
+        [[ "$status" != "active" ]] && continue
+
+        ((ACTIVE_COUNT++))
+
+        # Read state
+        ws_state=""
+        if [[ -f "$state" ]]; then
+            ws_state=$(cat "$state")
+        fi
+
+        # Read latest rollup (first 60 lines)
+        ws_rollup=""
+        latest_ep=$(find "$ws/episodes" -name "*.md" -print 2>/dev/null | sort -r | head -1)
+        if [[ -n "${latest_ep:-}" ]] && [[ -f "$latest_ep" ]]; then
+            ws_rollup=$(head -60 "$latest_ep")
+        fi
+
+        # Last rollup date
+        last_rollup=$(grep "last_rollup:" "$state" 2>/dev/null | awk '{print $2}' | head -1)
+
+        # Open loops count
+        open_loops=$(grep -c '^\s*- \[ \]\|^\s*- \[>\]' "$state" 2>/dev/null || echo "0")
+
+        # Headline from latest rollup
+        headline=$(read_headline "$ws")
+
+        echo "  ● $name (last: ${last_rollup:-never}, $open_loops open loops)"
+
+        PROJECT_SUMMARIES+="
+---
+## Project: $name
+Last rollup: ${last_rollup:-never}
+Open loops: $open_loops
+Headline: ${headline:-no recent rollup}
+
+### State
+$ws_state
+
+### Latest Rollup (excerpt)
+$ws_rollup
+"
+    done
+
+    if [[ "$ACTIVE_COUNT" -eq 0 ]]; then
+        echo "No active projects found. Initialize one with: axon init --project NAME --path /path"
+        exit 1
+    fi
+
+    echo ""
+    echo "  $ACTIVE_COUNT active projects"
+    echo ""
+
+    # Load protocol
+    PROTOCOL_TEXT=""
+    if [[ -f "$PROTOCOL" ]]; then
+        PROTOCOL_TEXT=$(cat "$PROTOCOL")
+    fi
+
+    SYSTEM_CONTEXT="$PROTOCOL_TEXT
+
+## Multi-Project Morning Briefing
+
+You are delivering a morning briefing across $ACTIVE_COUNT projects. The developer manages all of these. Your job:
+
+1. **Open with the big picture** — one sentence on overall status. How many projects, total open loops, anything urgent.
+2. **Per-project summary** — for each active project, 2-3 lines: what happened recently, what's the top priority, any blockers.
+3. **Cross-project priorities** — rank the top 3 things to do today across ALL projects. Highest leverage first.
+4. **Offer to go deep** — ask which project they want to focus on first.
+
+Be concise. This is a briefing, not a report. The developer should be oriented in under 60 seconds of reading.
+
+## Project Data
+
+$PROJECT_SUMMARIES"
+
+    echo "Starting multi-project morning session..."
+    echo ""
+    touch "$SESSION_MARKER"
+    exec claude \
+        --append-system-prompt "$SYSTEM_CONTEXT" \
+        2> >(tee -a "$MORNING_DIR/${TODAY}.log" >&2)
+fi
+
+# ====================================
+# SINGLE-PROJECT MODE (default)
+# ====================================
 
 # Check initialized
 if [[ ! -f "$WORKSPACE/state.md" ]]; then
@@ -93,7 +233,9 @@ Produce a catch-up rollup. This is NOT a normal daily rollup — the developer h
 4. **Unfinished Work** — use [>] for items that have been waiting
 5. **Recommended Re-entry Point** — where should the developer start? What's the quickest way back into flow?
 
-Tone: 'Welcome back. Here's what happened while you were gone.'" | claude -p --output-format json 2>/dev/null)
+Tone: 'Welcome back. Here's what happened while you were gone.'
+
+IMPORTANT: Output ONLY the rollup document. No preamble, no meta-commentary." | claude -p --output-format json 2>/dev/null)
 
     CATCHUP_TEXT=$(echo "$CATCHUP_RESULT" | jq -r '.result' 2>/dev/null)
 
@@ -111,7 +253,9 @@ $STATE
 $CATCHUP_TEXT
 
 ## Task
-Regenerate state.md. Keep under 2000 tokens. Update all sections to reflect current reality after the gap. Add YAML frontmatter with last_rollup: $TODAY" | claude -p --output-format json 2>/dev/null | jq -r '.result' 2>/dev/null)
+Regenerate state.md. Keep under 2000 tokens. Update all sections to reflect current reality after the gap. Add YAML frontmatter with last_rollup: $TODAY
+
+IMPORTANT: Output ONLY the state.md content. No preamble, no meta-commentary." | claude -p --output-format json 2>/dev/null | jq -r '.result' 2>/dev/null)
 
         if [[ -n "$NEW_STATE" ]] && [[ "$NEW_STATE" != "null" ]]; then
             echo "$NEW_STATE" > "$WORKSPACE/state.md"

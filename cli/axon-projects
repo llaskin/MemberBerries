@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# axon-projects — List projects and manage their status
+# Usage: axon projects                    # list all
+#        axon projects archive            # archive current/specified project
+#        axon projects pause              # pause (exclude from morning --all)
+#        axon projects activate           # reactivate
+
+set -euo pipefail
+
+AXON_HOME="${AXON_HOME:-$HOME/.axon}"
+PROJECT="${PROJECT:-}"
+
+ACTION="${1:-list}"
+
+# Helper: read status from config.yaml
+read_status() {
+    local config="$1"
+    if [[ -f "$config" ]]; then
+        grep "^status:" "$config" 2>/dev/null | awk '{print $2}' || echo "active"
+    else
+        echo "active"
+    fi
+}
+
+# Helper: set status in config.yaml
+set_status() {
+    local config="$1"
+    local new_status="$2"
+
+    if [[ ! -f "$config" ]]; then
+        echo "Error: No config.yaml found at $config"
+        exit 1
+    fi
+
+    if grep -q "^status:" "$config"; then
+        # Update existing status line
+        if [[ "$(uname)" == "Darwin" ]]; then
+            sed -i '' "s/^status:.*$/status: $new_status/" "$config"
+        else
+            sed -i "s/^status:.*$/status: $new_status/" "$config"
+        fi
+    else
+        # Add status after project_path line
+        if [[ "$(uname)" == "Darwin" ]]; then
+            sed -i '' "/^project_path:/a\\
+status: $new_status" "$config"
+        else
+            sed -i "/^project_path:/a status: $new_status" "$config"
+        fi
+    fi
+}
+
+case "$ACTION" in
+    list)
+        echo "=== Axon Projects ==="
+        echo ""
+
+        ACTIVE=0
+        PAUSED=0
+        ARCHIVED=0
+
+        for ws in "$AXON_HOME/workspaces"/*/; do
+            [[ ! -d "$ws" ]] && continue
+            name=$(basename "$ws")
+            config="$ws/config.yaml"
+            state="$ws/state.md"
+
+            status=$(read_status "$config")
+            last="never"
+            episodes=0
+            open_loops=0
+
+            if [[ -f "$state" ]]; then
+                last=$(grep "last_rollup:" "$state" 2>/dev/null | awk '{print $2}' | head -1)
+                last="${last:-never}"
+            fi
+
+            episodes=$(find "$ws/episodes" -name "*.md" -print 2>/dev/null | wc -l | tr -d ' ')
+            open_loops=$(grep -c '^\s*- \[ \]\|^\s*- \[>\]' "$state" 2>/dev/null || echo "0")
+
+            # Status indicator
+            case "$status" in
+                active)   indicator="●" ; ((ACTIVE++)) ;;
+                paused)   indicator="◐" ; ((PAUSED++)) ;;
+                archived) indicator="○" ; ((ARCHIVED++)) ;;
+                *)        indicator="?" ;;
+            esac
+
+            printf "  %s  %-30s %s  %s episodes  %s open loops\n" \
+                "$indicator" "$name" "last: $last" "$episodes" "$open_loops"
+        done
+
+        echo ""
+        echo "  ● active ($ACTIVE)  ◐ paused ($PAUSED)  ○ archived ($ARCHIVED)"
+        echo ""
+        echo "Manage: axon archive|pause|resume --project NAME"
+        ;;
+
+    archive)
+        if [[ -z "$PROJECT" ]]; then
+            echo "Error: --project is required"
+            echo "Usage: axon archive --project myapp"
+            exit 1
+        fi
+
+        config="$AXON_HOME/workspaces/$PROJECT/config.yaml"
+        set_status "$config" "archived"
+        echo "  ○ $PROJECT → archived"
+        echo "  Excluded from morning --all. Cron should be removed separately:"
+        echo "    axon cron remove --project $PROJECT"
+        ;;
+
+    pause)
+        if [[ -z "$PROJECT" ]]; then
+            echo "Error: --project is required"
+            echo "Usage: axon pause --project myapp"
+            exit 1
+        fi
+
+        config="$AXON_HOME/workspaces/$PROJECT/config.yaml"
+        set_status "$config" "paused"
+        echo "  ◐ $PROJECT → paused"
+        echo "  Excluded from morning --all. Cron continues running."
+        ;;
+
+    activate)
+        if [[ -z "$PROJECT" ]]; then
+            echo "Error: --project is required"
+            echo "Usage: axon resume --project myapp"
+            exit 1
+        fi
+
+        config="$AXON_HOME/workspaces/$PROJECT/config.yaml"
+        set_status "$config" "active"
+        echo "  ● $PROJECT → active"
+        echo "  Included in morning --all."
+        ;;
+
+    *)
+        echo "Usage: axon projects [list|archive|pause|activate]"
+        exit 1
+        ;;
+esac

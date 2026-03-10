@@ -55,6 +55,7 @@ cat > "$WORKSPACE/config.yaml" << EOF
 project: $PROJECT
 project_path: $PROJECT_PATH
 created_at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+status: active
 
 dendrites:
   git-log:
