@@ -1,6 +1,60 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+@theme {
+  /* Colors */
+  --color-ax-base: #FAF7F2;
+  --color-ax-elevated: #FFFFFF;
+  --color-ax-sunken: #F3EDE5;
+  --color-ax-sidebar: #2C2420;
+
+  --color-ax-brand: #C8956C;
+  --color-ax-brand-hover: #B5845E;
+  --color-ax-brand-active: #A27350;
+  --color-ax-brand-subtle: #F0E4D8;
+
+  --color-ax-accent: #7B9E7B;
+  --color-ax-accent-hover: #6B8E6B;
+  --color-ax-accent-subtle: #E8F0E8;
+
+  --color-ax-success: #5A8A5A;
+  --color-ax-success-subtle: #E4EFE4;
+  --color-ax-warning: #C4933B;
+  --color-ax-warning-subtle: #F8F0E0;
+  --color-ax-error: #B85450;
+  --color-ax-error-subtle: #F8EAEA;
+  --color-ax-info: #6B8FAD;
+  --color-ax-info-subtle: #E8EFF5;
+
+  --color-ax-border: #E5DDD3;
+  --color-ax-border-subtle: #EDE7DF;
+  --color-ax-border-strong: #C4B8AD;
+
+  --color-ax-text-primary: #1A1614;
+  --color-ax-text-secondary: #5C524A;
+  --color-ax-text-tertiary: #9B8E83;
+  --color-ax-text-ghost: #C4B8AD;
+
+  --color-ax-energy-low: #9B8E83;
+  --color-ax-energy-medium: #C8956C;
+  --color-ax-energy-high: #B85450;
+
+  /* Fonts */
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Font sizes */
+  --font-size-display: 48px;
+  --font-size-h1: 36px;
+  --font-size-h2: 28px;
+  --font-size-h3: 22px;
+  --font-size-h4: 18px;
+  --font-size-body: 15px;
+  --font-size-small: 13px;
+  --font-size-micro: 11px;
+}
+
 :root {
   --ax-bg-base: #FAF7F2;
   --ax-bg-elevated: #FFFFFF;
@@ -15,16 +69,16 @@
   --ax-brand-primary: #C8956C;
   --ax-border: #E5DDD3;
   --ax-shadow-color: 47, 36, 28;
-  --ax-ascii-char: #D8CFC4;
-  --ax-ascii-char-dim: #E8E0D6;
-  --ax-ascii-char-bright: #B8AA9C;
+  --ax-ascii-char: #EAE3DA;
+  --ax-ascii-char-dim: #F0EBE4;
+  --ax-ascii-char-bright: #DDD4C9;
 }
 
 body {
   margin: 0;
   background: var(--ax-bg-base);
   color: var(--ax-text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

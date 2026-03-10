@@ -31,7 +31,7 @@ function Metrics({ frontmatter }: { frontmatter: RollupEpisode['frontmatter'] })
   if (items.length === 0) return null
 
   return (
-    <div className="font-mono text-small text-ax-text-tertiary">
+    <div className="font-mono text-small text-ax-text-secondary">
       {items.map((item, i) => (
         <span key={item}>
           {i > 0 && <span className="mx-2 opacity-40">&middot;</span>}
@@ -49,10 +49,11 @@ export function RollupCard({ rollup, index }: { rollup: RollupEpisode; index: nu
     <article
       className="animate-fade-in-up bg-ax-elevated rounded-xl border border-ax-border p-6
         cursor-pointer group
+        shadow-[0_1px_3px_rgba(var(--ax-shadow-color),0.04)]
         transition-all duration-200
         hover:-translate-y-0.5
         hover:border-l-[3px] hover:border-l-ax-brand
-        hover:shadow-[0_8px_30px_rgba(var(--ax-shadow-color),0.08)]"
+        hover:shadow-[0_8px_30px_rgba(var(--ax-shadow-color),0.1)]"
       style={{ animationDelay: `${Math.min(index, 5) * 60}ms` }}
     >
       {/* Date + Energy */}
@@ -73,7 +74,7 @@ export function RollupCard({ rollup, index }: { rollup: RollupEpisode; index: nu
         <div className="flex flex-wrap gap-1.5 mb-4">
           {frontmatter.tags.map((tag) => (
             <span key={tag} className="font-mono text-micro px-2 py-0.5 rounded-full
-              bg-ax-sunken text-ax-text-secondary">
+              bg-ax-sunken text-ax-text-primary/70">
               {tag}
             </span>
           ))}
