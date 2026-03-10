@@ -166,11 +166,10 @@ export function NeuralBackground({ messages = [] }: Props) {
 
   return (
     <div
-      className="absolute inset-0 overflow-hidden pointer-events-none select-none"
+      className="absolute inset-0 overflow-hidden pointer-events-none select-none ax-neural-bg"
       style={{
         maskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, transparent 40%, black 90%)',
         WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, transparent 40%, black 90%)',
-        opacity: 0.6,
       }}
     >
       <pre

@@ -42,11 +42,12 @@ function Metrics({ frontmatter }: { frontmatter: RollupEpisode['frontmatter'] })
   )
 }
 
-export function RollupCard({ rollup, index }: { rollup: RollupEpisode; index: number }) {
+export function RollupCard({ rollup, index, onClick }: { rollup: RollupEpisode; index: number; onClick?: () => void }) {
   const { frontmatter, summary } = rollup
 
   return (
     <article
+      onClick={onClick}
       className="animate-fade-in-up bg-ax-elevated rounded-xl border border-ax-border p-6
         cursor-pointer group
         shadow-[0_1px_3px_rgba(var(--ax-shadow-color),0.04)]

@@ -1,43 +1,179 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/* ================================================
+   LIGHT MODE — "Cream Paper"
+   Warm, editorial, premium
+   ================================================ */
+:root {
+  /* Surfaces */
+  --ax-bg-base:             #FAF7F2;
+  --ax-bg-elevated:         #FFFFFF;
+  --ax-bg-sunken:           #F3EDE5;
+  --ax-bg-sidebar:          #2C2420;
+
+  /* Text */
+  --ax-text-primary:        #1A1614;
+  --ax-text-secondary:      #5C524A;
+  --ax-text-tertiary:       #9B8E83;
+  --ax-text-ghost:          #C4B8AD;
+  --ax-text-on-dark:        #F5F0EA;
+  --ax-text-on-dark-muted:  #A89888;
+
+  /* Brand */
+  --ax-brand-primary:       #C8956C;
+  --ax-brand-hover:         #B5845E;
+  --ax-brand-active:        #A27350;
+  --ax-brand-subtle:        #F0E4D8;
+
+  /* Accent */
+  --ax-accent:              #7B9E7B;
+  --ax-accent-hover:        #6B8E6B;
+  --ax-accent-subtle:       #E8F0E8;
+
+  /* Semantic */
+  --ax-success:             #5A8A5A;
+  --ax-success-subtle:      #E4EFE4;
+  --ax-warning:             #C4933B;
+  --ax-warning-subtle:      #F8F0E0;
+  --ax-error:               #B85450;
+  --ax-error-subtle:        #F8EAEA;
+  --ax-info:                #6B8FAD;
+  --ax-info-subtle:         #E8EFF5;
+
+  /* Borders */
+  --ax-border:              #E5DDD3;
+  --ax-border-subtle:       #EDE7DF;
+  --ax-border-strong:       #C4B8AD;
+
+  /* Energy */
+  --ax-energy-low:          #9B8E83;
+  --ax-energy-medium:       #C8956C;
+  --ax-energy-high:         #B85450;
+
+  /* Neural ASCII */
+  --ax-ascii-char:          #EAE3DA;
+  --ax-ascii-char-dim:      #F0EBE4;
+  --ax-ascii-char-bright:   #DDD4C9;
+  --ax-neural-opacity:      0.6;
+
+  /* Shadows */
+  --ax-shadow-color:        47, 36, 28;
+
+  /* Selection */
+  --ax-selection-bg:        #C8956C33;
+}
+
+/* ================================================
+   DARK MODE — "Neural Dark"
+   Warm charcoal, not blue-black.
+   ================================================ */
+[data-theme="dark"] {
+  /* Surfaces */
+  --ax-bg-base:             #1A1614;
+  --ax-bg-elevated:         #252019;
+  --ax-bg-sunken:           #13110F;
+  --ax-bg-sidebar:          #13110F;
+
+  /* Text */
+  --ax-text-primary:        #F0EBE4;
+  --ax-text-secondary:      #B8AA9C;
+  --ax-text-tertiary:       #7A6E63;
+  --ax-text-ghost:          #3D3530;
+  --ax-text-on-dark:        #F0EBE4;
+  --ax-text-on-dark-muted:  #7A6E63;
+
+  /* Brand — slightly brighter for contrast */
+  --ax-brand-primary:       #D4A57C;
+  --ax-brand-hover:         #DEB58E;
+  --ax-brand-active:        #C8956C;
+  --ax-brand-subtle:        #2E2520;
+
+  /* Accent */
+  --ax-accent:              #8DB88D;
+  --ax-accent-hover:        #9DC89D;
+  --ax-accent-subtle:       #1E2A1E;
+
+  /* Semantic */
+  --ax-success:             #6BA06B;
+  --ax-success-subtle:      #1A261A;
+  --ax-warning:             #D4A34B;
+  --ax-warning-subtle:      #2A2418;
+  --ax-error:               #D06460;
+  --ax-error-subtle:        #2A1A1A;
+  --ax-info:                #7BA0BE;
+  --ax-info-subtle:         #1A2230;
+
+  /* Borders */
+  --ax-border:              #332D27;
+  --ax-border-subtle:       #2A2420;
+  --ax-border-strong:       #4A403A;
+
+  /* Energy */
+  --ax-energy-low:          #5C524A;
+  --ax-energy-medium:       #D4A57C;
+  --ax-energy-high:         #D06460;
+
+  /* Neural ASCII */
+  --ax-ascii-char:          #2A2420;
+  --ax-ascii-char-dim:      #1F1C18;
+  --ax-ascii-char-bright:   #3D3530;
+  --ax-neural-opacity:      0.15;
+
+  /* Shadows */
+  --ax-shadow-color:        0, 0, 0;
+
+  /* Selection */
+  --ax-selection-bg:        #D4A57C33;
+}
+
+/* ================================================
+   TAILWIND v4 THEME — references CSS vars
+   Every Tailwind utility auto-resolves per theme.
+   ================================================ */
 @theme {
-  /* Colors */
-  --color-ax-base: #FAF7F2;
-  --color-ax-elevated: #FFFFFF;
-  --color-ax-sunken: #F3EDE5;
-  --color-ax-sidebar: #2C2420;
+  /* Surfaces */
+  --color-ax-base: var(--ax-bg-base);
+  --color-ax-elevated: var(--ax-bg-elevated);
+  --color-ax-sunken: var(--ax-bg-sunken);
+  --color-ax-sidebar: var(--ax-bg-sidebar);
 
-  --color-ax-brand: #C8956C;
-  --color-ax-brand-hover: #B5845E;
-  --color-ax-brand-active: #A27350;
-  --color-ax-brand-subtle: #F0E4D8;
+  /* Text */
+  --color-ax-text-primary: var(--ax-text-primary);
+  --color-ax-text-secondary: var(--ax-text-secondary);
+  --color-ax-text-tertiary: var(--ax-text-tertiary);
+  --color-ax-text-ghost: var(--ax-text-ghost);
 
-  --color-ax-accent: #7B9E7B;
-  --color-ax-accent-hover: #6B8E6B;
-  --color-ax-accent-subtle: #E8F0E8;
+  /* Brand */
+  --color-ax-brand: var(--ax-brand-primary);
+  --color-ax-brand-hover: var(--ax-brand-hover);
+  --color-ax-brand-active: var(--ax-brand-active);
+  --color-ax-brand-subtle: var(--ax-brand-subtle);
 
-  --color-ax-success: #5A8A5A;
-  --color-ax-success-subtle: #E4EFE4;
-  --color-ax-warning: #C4933B;
-  --color-ax-warning-subtle: #F8F0E0;
-  --color-ax-error: #B85450;
-  --color-ax-error-subtle: #F8EAEA;
-  --color-ax-info: #6B8FAD;
-  --color-ax-info-subtle: #E8EFF5;
+  /* Accent */
+  --color-ax-accent: var(--ax-accent);
+  --color-ax-accent-hover: var(--ax-accent-hover);
+  --color-ax-accent-subtle: var(--ax-accent-subtle);
 
-  --color-ax-border: #E5DDD3;
-  --color-ax-border-subtle: #EDE7DF;
-  --color-ax-border-strong: #C4B8AD;
+  /* Semantic */
+  --color-ax-success: var(--ax-success);
+  --color-ax-success-subtle: var(--ax-success-subtle);
+  --color-ax-warning: var(--ax-warning);
+  --color-ax-warning-subtle: var(--ax-warning-subtle);
+  --color-ax-error: var(--ax-error);
+  --color-ax-error-subtle: var(--ax-error-subtle);
+  --color-ax-info: var(--ax-info);
+  --color-ax-info-subtle: var(--ax-info-subtle);
 
-  --color-ax-text-primary: #1A1614;
-  --color-ax-text-secondary: #5C524A;
-  --color-ax-text-tertiary: #9B8E83;
-  --color-ax-text-ghost: #C4B8AD;
+  /* Borders */
+  --color-ax-border: var(--ax-border);
+  --color-ax-border-subtle: var(--ax-border-subtle);
+  --color-ax-border-strong: var(--ax-border-strong);
 
-  --color-ax-energy-low: #9B8E83;
-  --color-ax-energy-medium: #C8956C;
-  --color-ax-energy-high: #B85450;
+  /* Energy */
+  --color-ax-energy-low: var(--ax-energy-low);
+  --color-ax-energy-medium: var(--ax-energy-medium);
+  --color-ax-energy-high: var(--ax-energy-high);
 
   /* Fonts */
   --font-serif: "Instrument Serif", Georgia, serif;
@@ -55,25 +191,9 @@
   --font-size-micro: 11px;
 }
 
-:root {
-  --ax-bg-base: #FAF7F2;
-  --ax-bg-elevated: #FFFFFF;
-  --ax-bg-sunken: #F3EDE5;
-  --ax-bg-sidebar: #2C2420;
-  --ax-text-primary: #1A1614;
-  --ax-text-secondary: #5C524A;
-  --ax-text-tertiary: #9B8E83;
-  --ax-text-ghost: #C4B8AD;
-  --ax-text-on-dark: #F5F0EA;
-  --ax-text-on-dark-muted: #A89888;
-  --ax-brand-primary: #C8956C;
-  --ax-border: #E5DDD3;
-  --ax-shadow-color: 47, 36, 28;
-  --ax-ascii-char: #EAE3DA;
-  --ax-ascii-char-dim: #F0EBE4;
-  --ax-ascii-char-bright: #DDD4C9;
-}
-
+/* ================================================
+   Base styles
+   ================================================ */
 body {
   margin: 0;
   background: var(--ax-bg-base);
@@ -83,11 +203,13 @@ body {
 }
 
 ::selection {
-  background: #C8956C33;
+  background: var(--ax-selection-bg);
   color: var(--ax-text-primary);
 }
 
-/* Card entrance animation */
+/* ================================================
+   Animations
+   ================================================ */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -103,7 +225,6 @@ body {
   animation: fadeInUp 0.4s ease-out both;
 }
 
-/* Pulse for today's rollup dot */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.85); }
@@ -113,7 +234,22 @@ body {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
-/* Neural ASCII character classes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out both;
+}
+
+/* ================================================
+   Neural ASCII
+   ================================================ */
+.ax-neural-bg {
+  opacity: var(--ax-neural-opacity);
+}
+
 .ax-ascii-dim {
   color: var(--ax-ascii-char-dim);
 }
@@ -122,14 +258,4 @@ body {
 }
 .ax-ascii-bright {
   color: var(--ax-ascii-char-bright);
-}
-
-/* Content fade in */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out both;
 }

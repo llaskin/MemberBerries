@@ -1,7 +1,8 @@
 import { useProjects } from '@/hooks/useProjects'
-import { Layers, Clock, Brain, Settings, Search } from 'lucide-react'
+import { useUIStore, type ViewId } from '@/store/uiStore'
+import { Layers, Clock, Brain, Settings, Search, Sun, Moon } from 'lucide-react'
 
-const navItems = [
+const navItems: { id: ViewId; label: string; icon: typeof Clock }[] = [
   { id: 'timeline', label: 'Timeline', icon: Clock },
   { id: 'state', label: 'State', icon: Layers },
   { id: 'decisions', label: 'Decisions', icon: Brain },
@@ -10,13 +11,19 @@ const navItems = [
 
 export function Sidebar() {
   const { projects, activeProject, setActiveProject } = useProjects()
+  const { activeView, setView, theme, toggleTheme } = useUIStore()
   const today = new Date().toISOString().split('T')[0]
 
   return (
     <aside className="w-64 h-screen bg-ax-sidebar flex flex-col shrink-0">
       {/* Logo */}
       <div className="px-5 py-6">
-        <h1 className="font-serif italic text-h2 text-[var(--ax-text-on-dark)] tracking-tight">axon</h1>
+        <h1
+          className="font-serif italic text-h2 text-[var(--ax-text-on-dark)] tracking-tight cursor-pointer"
+          onClick={() => setView('timeline')}
+        >
+          axon
+        </h1>
       </div>
 
       {/* Project Switcher */}
@@ -56,26 +63,45 @@ export function Sidebar() {
         <div className="text-micro font-mono uppercase tracking-widest text-[var(--ax-text-on-dark-muted)] px-2 mb-2">
           Views
         </div>
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            className="w-full text-left px-3 py-2 rounded-lg mb-1 flex items-center gap-3
-              text-[var(--ax-text-on-dark-muted)] hover:bg-white/5 hover:text-[var(--ax-text-on-dark)]
-              transition-colors duration-150"
-          >
-            <item.icon size={16} strokeWidth={1.5} />
-            <span className="text-small">{item.label}</span>
-          </button>
-        ))}
+        {navItems.map((item) => {
+          const isActive = activeView === item.id || (item.id === 'timeline' && activeView === 'rollup-detail')
+          return (
+            <button
+              key={item.id}
+              onClick={() => setView(item.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg mb-1 flex items-center gap-3
+                transition-all duration-150
+                ${isActive
+                  ? 'bg-white/10 text-[var(--ax-text-on-dark)] border-l-2 border-l-[var(--ax-brand-primary)]'
+                  : 'text-[var(--ax-text-on-dark-muted)] hover:bg-white/5 hover:text-[var(--ax-text-on-dark)] border-l-2 border-l-transparent'
+                }`}
+            >
+              <item.icon size={16} strokeWidth={1.5} />
+              <span className="text-small">{item.label}</span>
+            </button>
+          )
+        })}
       </nav>
 
-      {/* Search */}
-      <div className="px-3 pb-5">
+      {/* Footer: Search + Theme Toggle */}
+      <div className="px-3 pb-5 space-y-1">
         <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg
           text-[var(--ax-text-on-dark-muted)] hover:bg-white/5 transition-colors text-small">
           <Search size={14} strokeWidth={1.5} />
           <span>Search</span>
           <span className="ml-auto font-mono text-micro opacity-40">&#x2318;K</span>
+        </button>
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg
+            text-[var(--ax-text-on-dark-muted)] hover:bg-white/5 transition-colors text-small"
+        >
+          {theme === 'light' ? (
+            <Moon size={14} strokeWidth={1.5} />
+          ) : (
+            <Sun size={14} strokeWidth={1.5} />
+          )}
+          <span>{theme === 'light' ? 'Dark mode' : 'Light mode'}</span>
         </button>
       </div>
     </aside>

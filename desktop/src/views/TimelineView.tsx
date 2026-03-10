@@ -1,10 +1,12 @@
 import { RollupCard } from '@/components/timeline/RollupCard'
 import { useProjectStore } from '@/store/projectStore'
+import { useUIStore } from '@/store/uiStore'
 import { useRollups } from '@/hooks/useRollups'
 import { getGreeting } from '@/lib/utils'
 
 export function TimelineView() {
   const activeProject = useProjectStore((s) => s.activeProject)
+  const openRollup = useUIStore((s) => s.openRollup)
   const { rollups, loading } = useRollups(activeProject)
 
   return (
@@ -46,7 +48,7 @@ export function TimelineView() {
       {!loading && rollups.length > 0 && (
         <div className="space-y-4">
           {rollups.map((rollup, i) => (
-            <RollupCard key={rollup.filename} rollup={rollup} index={i} />
+            <RollupCard key={rollup.filename} rollup={rollup} index={i} onClick={() => openRollup(rollup.filename)} />
           ))}
         </div>
       )}

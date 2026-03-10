@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { NeuralBackground } from '@/components/shared/NeuralBackground'
+import { useThemeSync } from '@/hooks/useThemeSync'
 
 export function Shell({ children }: { children: ReactNode }) {
+  useThemeSync()
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
