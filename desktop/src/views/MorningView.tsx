@@ -355,29 +355,30 @@ export function MorningView() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)]">
-      {/* Header */}
-      <header className="shrink-0 mb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-serif italic text-body text-ax-text-tertiary mb-1">
-              {getGreeting()}
-            </p>
-            <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">
-              Morning
-            </h1>
-          </div>
-          <div className="flex gap-2">
+      {/* Header — with its own content shield */}
+      <header className="shrink-0 mb-4 relative">
+        <div className="absolute -inset-x-4 -inset-y-5 content-shield-wrap">
+          <div className="w-full h-full content-shield rounded-[28px]" />
+        </div>
+        <div className="relative text-center py-1">
+          <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">
+            {getGreeting().replace('.', '')}
+          </h1>
+          <div className="flex items-center justify-center gap-3 mt-1">
+            <span className="font-mono text-small text-ax-text-tertiary">
+              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
             {pastSessions.length > 0 && (
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-small font-mono transition-all
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-micro font-mono transition-all
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-ax-brand
                   ${showHistory
                     ? 'bg-ax-brand-subtle text-ax-brand border border-ax-brand/30'
                     : 'bg-ax-sunken text-ax-text-tertiary hover:text-ax-text-secondary border border-ax-border-subtle'
                   }`}
               >
-                <Clock size={14} />
+                <Clock size={12} />
                 {pastSessions.length} past
               </button>
             )}
@@ -415,11 +416,16 @@ export function MorningView() {
       {/* Chat area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-4 pb-4 min-h-0"
+        className="flex-1 overflow-y-auto pb-4 min-h-0 scrollbar-hide flex items-center justify-center"
       >
+        <div className="relative w-full max-w-md space-y-4 mx-auto">
+          <div className="absolute -inset-x-4 -inset-y-8 content-shield-wrap">
+            <div className="w-full h-full content-shield rounded-[60px]" />
+          </div>
+          <div className="relative">
         {/* Empty state */}
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-16">
+          <div className="flex flex-col items-center justify-center h-full text-center py-4">
             <div className="w-16 h-16 bg-ax-brand-subtle rounded-2xl flex items-center justify-center mb-6">
               <Coffee size={28} className="text-ax-brand" />
             </div>
@@ -488,6 +494,8 @@ export function MorningView() {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {/* Input area */}

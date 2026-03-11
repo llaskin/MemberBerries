@@ -141,6 +141,23 @@ export function axonDevApi(): Plugin {
             return
           }
 
+          // GET /api/axon/projects/:name/gource — serve gource.png if it exists
+          const gourceMatch = req.url.match(/^\/api\/axon\/projects\/([^/]+)\/gource$/)
+          if (gourceMatch) {
+            const project = decodeURIComponent(gourceMatch[1])
+            const gourcePath = join(AXON_HOME, 'workspaces', project, 'gource.png')
+            if (existsSync(gourcePath)) {
+              res.setHeader('Content-Type', 'image/png')
+              res.setHeader('Cache-Control', 'public, max-age=86400')
+              const img = await readFile(gourcePath)
+              res.end(img)
+            } else {
+              res.statusCode = 404
+              res.end(JSON.stringify({ error: 'No gource image' }))
+            }
+            return
+          }
+
           // POST /api/axon/chat — streaming Claude proxy
           if (req.url === '/api/axon/chat' && req.method === 'POST') {
             // Must await body + child lifecycle so connect doesn't close the request

@@ -51,7 +51,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
           return (
             <button
               key={p.name}
-              onClick={() => setActiveProject(p.name)}
+              onClick={() => { setActiveProject(p.name); setView('morning') }}
               aria-label={`Switch to ${p.name}${p.openLoopCount > 0 ? `, ${p.openLoopCount} open loops` : ''}`}
               aria-pressed={activeProject === p.name}
               className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 flex items-center gap-3 transition-all duration-150
@@ -110,7 +110,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
           {projects.filter(p => p.status === 'active').map((p) => (
             <button
               key={p.name}
-              onClick={() => setActiveProject(p.name)}
+              onClick={() => { setActiveProject(p.name); setView('morning') }}
               aria-label={`Switch to ${p.name}`}
               className={`w-1.5 h-1.5 rounded-full transition-all duration-200
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ax-brand-primary)]

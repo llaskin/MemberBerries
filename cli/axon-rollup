@@ -321,7 +321,21 @@ fi
 # Log it
 echo "- [$(date -u +"%Y-%m-%dT%H:%M:%SZ")] @axon: Rollup committed: $TODAY → $(basename "$EPISODE_FILE")" >> "$WORKSPACE/stream.md"
 
-# Step 6: Auto-commit to Axon git repo
+# Step 6: Regenerate Gource visual fingerprint (if gource + ffmpeg available)
+if command -v gource &>/dev/null && command -v ffmpeg &>/dev/null && [[ -d "$PROJECT_PATH/.git" ]]; then
+    echo "  Regenerating Gource fingerprint..."
+    if gource --window-position 5000x5000 --frameless -1920x1080 \
+        --stop-at-end -s 0.001 --auto-skip-seconds 0.001 \
+        --hide bloom,mouse,progress,filenames,dirnames,usernames,date \
+        --background 000000 -o - --output-framerate 25 "$PROJECT_PATH" 2>/dev/null \
+        | ffmpeg -y -f image2pipe -vcodec ppm -i - -update 1 "$WORKSPACE/gource.png" 2>/dev/null; then
+        echo "  ✓ Gource fingerprint updated"
+    else
+        echo "  ⚠ Gource generation failed (non-fatal)"
+    fi
+fi
+
+# Step 7: Auto-commit to Axon git repo
 if [[ -d "$AXON_HOME/.git" ]]; then
     if ! git -C "$AXON_HOME" add "workspaces/$PROJECT/" 2>&1; then
         echo "  WARNING: Failed to stage rollup in Axon git repo"
