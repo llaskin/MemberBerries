@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Bug } from 'lucide-react'
 import { useDebugStore } from '@/store/debugStore'
 
 export function DebugMenu() {
   if (!import.meta.env.DEV) return null
 
-  const actions = useDebugStore((s) => Array.from(s.actions.values()))
+  const actionsMap = useDebugStore((s) => s.actions)
+  const actions = useMemo(() => Array.from(actionsMap.values()), [actionsMap])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 

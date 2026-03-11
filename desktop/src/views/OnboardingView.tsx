@@ -182,7 +182,8 @@ function RepoSelector({ onSelect }: { onSelect: (repo: DiscoveredRepo) => void }
   const [customPath, setCustomPath] = useState('')
   const [showCustom, setShowCustom] = useState(false)
   const [simulateEmpty, setSimulateEmpty] = useState(false)
-  const { register, unregister } = useDebugStore()
+  const register = useDebugStore((s) => s.register)
+  const unregister = useDebugStore((s) => s.unregister)
 
   // Register debug action for this view
   useEffect(() => {
@@ -193,7 +194,8 @@ function RepoSelector({ onSelect }: { onSelect: (repo: DiscoveredRepo) => void }
       toggle: () => setSimulateEmpty(v => !v),
     })
     return () => unregister('onboarding:empty-repos')
-  }, [simulateEmpty, register, unregister])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simulateEmpty])
 
   useEffect(() => {
     fetch('/api/axon/discover-repos')
