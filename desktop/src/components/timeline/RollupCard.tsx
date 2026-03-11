@@ -1,5 +1,6 @@
 import type { RollupEpisode, EnergyLevel } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
+import { renderInlineFormatting } from '@/components/shared/InlineMarkdown'
 
 function EnergyDots({ energy }: { energy?: EnergyLevel }) {
   if (!energy) return null
@@ -93,7 +94,7 @@ export function RollupCard({ rollup, index, onClick }: { rollup: RollupEpisode; 
       {/* Summary */}
       {summary && (
         <p className="text-body text-ax-text-secondary leading-relaxed line-clamp-3 mb-4">
-          {summary}
+          {renderInlineFormatting(summary)}
         </p>
       )}
 
