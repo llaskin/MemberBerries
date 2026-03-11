@@ -55,6 +55,76 @@ Body.`
     // Should either fail gracefully or return empty frontmatter
     expect(result).toBeDefined()
   })
+
+  it('strips preamble before frontmatter', () => {
+    const content = `File writes denied. I'll produce the rollup from context.
+
+---
+type: rollup
+date: 2026-03-11
+project: test
+headline: "Preamble test"
+---
+
+## Summary
+
+This had preamble.`
+
+    const result = parseFrontmatter(content)
+    expect(result.ok).toBe(true)
+    expect(result.data?.frontmatter).toMatchObject({
+      type: 'rollup',
+      date: '2026-03-11',
+      headline: 'Preamble test',
+    })
+    expect(result.data?.body).toContain('This had preamble.')
+  })
+
+  it('unwraps code-fenced frontmatter', () => {
+    const content = `---
+\`\`\`yaml
+type: rollup
+date: 2026-03-11
+project: test
+headline: "Code fenced"
+\`\`\`
+---
+
+## Summary
+
+Code fenced YAML.`
+
+    const result = parseFrontmatter(content)
+    expect(result.ok).toBe(true)
+    expect(result.data?.frontmatter).toMatchObject({
+      type: 'rollup',
+      headline: 'Code fenced',
+    })
+  })
+
+  it('handles preamble + code-fenced frontmatter combined', () => {
+    const content = `Some preamble text here.
+
+---
+\`\`\`yaml
+type: rollup
+date: 2026-03-11
+headline: "Both issues"
+\`\`\`
+---
+
+## Summary
+
+Had both problems.`
+
+    const result = parseFrontmatter(content)
+    expect(result.ok).toBe(true)
+    expect(result.data?.frontmatter).toMatchObject({
+      type: 'rollup',
+      headline: 'Both issues',
+    })
+    expect(result.data?.body).toContain('Had both problems.')
+  })
 })
 
 describe('extractSummary', () => {

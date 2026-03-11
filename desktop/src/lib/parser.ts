@@ -7,12 +7,26 @@ export interface ParseResult<T> {
 }
 
 export function parseFrontmatter<T = Record<string, unknown>>(content: string): ParseResult<{ frontmatter: T; body: string }> {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
+  // Try matching frontmatter at the start
+  let match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
+
+  // If not at start, strip preamble — find the first --- that precedes "type:"
+  if (!match) {
+    const fmStart = content.indexOf('\n---\n')
+    if (fmStart >= 0) {
+      const stripped = content.slice(fmStart + 1)
+      match = stripped.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
+    }
+  }
+
   if (!match) {
     return { ok: true, data: { frontmatter: {} as T, body: content } }
   }
   try {
-    const frontmatter = parseYaml(match[1]) as T
+    // Strip code fence markers from frontmatter (```yaml wrapping)
+    let yamlText = match[1]
+    yamlText = yamlText.replace(/^```(?:yaml)?\n/gm, '').replace(/\n```$/gm, '')
+    const frontmatter = parseYaml(yamlText) as T
     return { ok: true, data: { frontmatter, body: match[2] } }
   } catch (e) {
     return { ok: false, error: `YAML parse error: ${e}` }
