@@ -4,7 +4,7 @@ import { useRollups } from '@/hooks/useRollups'
 import { parseDecisionTraces } from '@/lib/parser'
 import { formatDate } from '@/lib/utils'
 import { renderInlineFormatting } from '@/components/shared/InlineMarkdown'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Brain } from 'lucide-react'
 import type { RollupEpisode } from '@/lib/types'
 
 function DecisionCard({ dt }: { dt: { id: string; title: string; input: string; constraint: string; tradeoff: string; decision: string } }) {
@@ -261,6 +261,7 @@ function RollupHeader({ rollup }: { rollup: RollupEpisode }) {
 export function RollupDetailView() {
   const selectedRollup = useUIStore((s) => s.selectedRollup)
   const goBack = useUIStore((s) => s.goBack)
+  const setView = useUIStore((s) => s.setView)
   const activeProject = useProjectStore((s) => s.activeProject)
   const { rollups, loading } = useRollups(activeProject)
 
@@ -308,6 +309,15 @@ export function RollupDetailView() {
               <DecisionCard key={dt.id} dt={dt} />
             ))}
           </div>
+          <button
+            onClick={() => setView('decisions')}
+            className="flex items-center gap-2 mt-4 text-small text-ax-text-tertiary hover:text-ax-brand
+              transition-colors duration-150 group"
+          >
+            <Brain size={14} />
+            <span>View all decisions</span>
+            <span className="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+          </button>
         </section>
       )}
 

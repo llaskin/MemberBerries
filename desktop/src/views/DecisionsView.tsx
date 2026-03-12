@@ -5,7 +5,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useBackend } from '@/providers/DataProvider'
 import { parseFrontmatter, parseDecisionTraces, extractSummary } from '@/lib/parser'
 import { formatDate } from '@/lib/utils'
-import { Search, Globe, FolderOpen } from 'lucide-react'
+import { Search, Globe, FolderOpen, ArrowLeft } from 'lucide-react'
 import type { RollupEpisode, RollupFrontmatter } from '@/lib/types'
 
 interface DecisionWithContext {
@@ -78,6 +78,7 @@ export function DecisionsView() {
   const activeProject = useProjectStore((s) => s.activeProject)
   const projects = useProjectStore((s) => s.projects)
   const openRollup = useUIStore((s) => s.openRollup)
+  const setView = useUIStore((s) => s.setView)
   const { rollups, loading, error } = useRollups(activeProject)
   const [search, setSearch] = useState('')
   const [crossProject, setCrossProject] = useState(false)
@@ -151,6 +152,14 @@ export function DecisionsView() {
   return (
     <div>
       <header className="mb-8">
+        <button
+          onClick={() => setView('timeline')}
+          className="flex items-center gap-1.5 text-small text-ax-text-tertiary hover:text-ax-brand
+            transition-colors duration-150 mb-6 group"
+        >
+          <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+          <span>Timeline</span>
+        </button>
         <div className="flex items-start justify-between">
           <div>
             <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">

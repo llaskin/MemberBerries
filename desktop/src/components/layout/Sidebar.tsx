@@ -1,12 +1,10 @@
 import { useProjects } from '@/hooks/useProjects'
 import { useUIStore, type ViewId } from '@/store/uiStore'
-import { Layers, Clock, Brain, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, MessageSquare, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Clock, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, MessageSquare, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 const navItems: { id: ViewId; label: string; icon: typeof Clock }[] = [
   { id: 'timeline', label: 'Timeline', icon: Clock },
   { id: 'morning', label: 'Morning', icon: Coffee },
-  { id: 'state', label: 'State', icon: Layers },
-  { id: 'decisions', label: 'Decisions', icon: Brain },
   { id: 'sessions', label: 'Sessions', icon: MessageSquare },
   { id: 'agent', label: 'Agent', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -116,7 +114,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
           </div>
         )}
         {navItems.map((item) => {
-          const isActive = activeView === item.id || (item.id === 'timeline' && activeView === 'rollup-detail')
+          const isActive = activeView === item.id || (item.id === 'timeline' && ['rollup-detail', 'state', 'decisions'].includes(activeView))
           return (
             <button
               key={item.id}

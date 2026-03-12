@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useProjectStore } from '@/store/projectStore'
+import { useUIStore } from '@/store/uiStore'
 import { useBackend } from '@/providers/DataProvider'
-import { formatDate, getGreeting } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
+import { ArrowLeft } from 'lucide-react'
 
 interface ParsedState {
   project: string
@@ -110,6 +112,7 @@ function StatCard({ title, children, className = '' }: { title: string; children
 
 export function StateView() {
   const activeProject = useProjectStore((s) => s.activeProject)
+  const setView = useUIStore((s) => s.setView)
   const backend = useBackend()
   const [state, setState] = useState<ParsedState | null>(null)
   const [loading, setLoading] = useState(true)
@@ -170,9 +173,14 @@ export function StateView() {
   return (
     <div>
       <header className="mb-8">
-        <p className="font-serif italic text-body text-ax-text-tertiary mb-1">
-          {getGreeting()}
-        </p>
+        <button
+          onClick={() => setView('timeline')}
+          className="flex items-center gap-1.5 text-small text-ax-text-tertiary hover:text-ax-brand
+            transition-colors duration-150 mb-6 group"
+        >
+          <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+          <span>Timeline</span>
+        </button>
         <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">
           State
         </h1>

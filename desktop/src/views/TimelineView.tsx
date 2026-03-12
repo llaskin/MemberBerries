@@ -3,10 +3,11 @@ import { useProjectStore } from '@/store/projectStore'
 import { useUIStore } from '@/store/uiStore'
 import { useRollups } from '@/hooks/useRollups'
 import { getGreeting } from '@/lib/utils'
+import { Layers } from 'lucide-react'
 
 export function TimelineView() {
   const activeProject = useProjectStore((s) => s.activeProject)
-  const openRollup = useUIStore((s) => s.openRollup)
+  const { openRollup, setView } = useUIStore()
   const { rollups, loading, error } = useRollups(activeProject)
 
   return (
@@ -53,6 +54,17 @@ export function TimelineView() {
 
       {!loading && rollups.length > 0 && (
         <div className="space-y-4">
+          {/* Current State card */}
+          <button
+            onClick={() => setView('state')}
+            className="w-full text-left bg-ax-elevated border border-ax-border rounded-xl p-4 flex items-center gap-3
+              hover:border-ax-brand/30 hover:bg-ax-brand-subtle/30 transition-all duration-150 group"
+          >
+            <Layers size={16} className="text-ax-brand shrink-0" />
+            <span className="text-body text-ax-text-primary font-medium">Current State</span>
+            <span className="ml-auto text-small text-ax-text-tertiary group-hover:text-ax-brand transition-colors">&rarr;</span>
+          </button>
+
           {rollups.map((rollup, i) => (
             <RollupCard key={rollup.filename} rollup={rollup} index={i} onClick={() => openRollup(rollup.filename)} />
           ))}
