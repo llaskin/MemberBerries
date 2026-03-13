@@ -514,16 +514,11 @@ export function TodosView() {
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)]">
       {/* Header */}
-      <header className="shrink-0 mb-6 relative">
-        <div className="absolute -inset-x-4 -inset-y-5 content-shield-wrap">
-          <div className="w-full h-full content-shield rounded-[28px]" />
-        </div>
-        <div className="relative text-center py-1">
-          <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">
-            Tasks
-          </h1>
-          <StatsBar items={items} />
-        </div>
+      <header className="shrink-0 mb-6 text-center">
+        <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">
+          Tasks
+        </h1>
+        <StatsBar items={items} />
       </header>
 
       {/* Mode tabs */}
