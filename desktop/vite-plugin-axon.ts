@@ -836,7 +836,20 @@ export function axonDevApi(): Plugin {
           // GET /api/axon/sessions?project={name}
           const sessionsMatch = req.url?.match(/^\/api\/axon\/sessions(\?project=([^&]+))?$/)
           if (sessionsMatch) {
-            const projectName = sessionsMatch[2] ? decodeURIComponent(sessionsMatch[2]) : undefined
+            const rawProjectName = sessionsMatch[2] ? decodeURIComponent(sessionsMatch[2]) : undefined
+            // Resolve workspace name → disk project name via config.yaml project_path
+            let projectName = rawProjectName
+            if (rawProjectName) {
+              try {
+                const cfg = await readFile(
+                  join(AXON_HOME, 'workspaces', rawProjectName, 'config.yaml'), 'utf-8'
+                )
+                const projectPath = cfg.match(/^project_path:\s*(.+)$/m)?.[1]?.trim()
+                if (projectPath) {
+                  projectName = projectPath.split('/').filter(Boolean).pop() || rawProjectName
+                }
+              } catch { /* fall back to raw name */ }
+            }
             try {
               const { getSessions, getIndexStatus } = await import('./src/lib/sessionDb')
               const { getAllSessionMeta } = await import('./src/lib/sessionMeta')
