@@ -270,51 +270,39 @@ fi
 # --- TODO-STATE DENDRITE ---
 if ! dendrite_enabled "todo-state"; then
     echo "  · todo-state: disabled in config"
-elif [[ -f "$WORKSPACE/todos.md" ]]; then
-    OUTFILE="$DENDRITE_DIR/${NOW}_todo-state.md"
-
-    # Count items per section
-    ACTIVE_COUNT=$(awk '/^## Active$/,/^## [A-Z]/' "$WORKSPACE/todos.md" | grep -c '^\- \[' || true)
-    COMPLETED_COUNT=$(awk '/^## Completed$/,/^## [A-Z]/' "$WORKSPACE/todos.md" | grep -c '^\- \[' || true)
-    DEFERRED_COUNT=$(awk '/^## Deferred$/,/^## [A-Z]/' "$WORKSPACE/todos.md" | grep -c '^\- \[' || true)
-    DROPPED_COUNT=$(awk '/^## Dropped$/,/^## [A-Z]/' "$WORKSPACE/todos.md" | grep -c '^\- \[' || true)
-
-    cat > "$OUTFILE" << EOF
----
-type: todo-state
-project: $PROJECT
-collected_at: $(echo "$NOW" | sed 's/T\([0-9]*\)-\([0-9]*\)-\([0-9]*\)Z/T\1:\2:\3Z/')
-active: $ACTIVE_COUNT
-completed: $COMPLETED_COUNT
-deferred: $DEFERRED_COUNT
-dropped: $DROPPED_COUNT
----
-
-# TODO State: $PROJECT
-
-$(cat "$WORKSPACE/todos.md")
-EOF
-
-    # Include recent mutations from log
-    if [[ -f "$WORKSPACE/todos-log.md" ]]; then
-        echo "" >> "$OUTFILE"
-        echo "## Recent Mutations" >> "$OUTFILE"
-        if [[ -n "${CUTOFF:-}" ]]; then
-            # Only mutations since last collection
-            while IFS= read -r logline; do
-                LOG_TS=$(echo "$logline" | sed -n 's/^\[\([^]]*\)\].*/\1/p')
-                if [[ -n "$LOG_TS" ]] && [[ "$LOG_TS" > "$CUTOFF" ]]; then
-                    echo "$logline" >> "$OUTFILE"
-                fi
-            done < "$WORKSPACE/todos-log.md"
-        else
-            tail -20 "$WORKSPACE/todos-log.md" >> "$OUTFILE"
-        fi
-    fi
-
-    echo "  ✓ todo-state: $ACTIVE_COUNT active, $COMPLETED_COUNT done, $DEFERRED_COUNT deferred, $DROPPED_COUNT dropped"
 else
-    echo "  · todo-state: no todos.md"
+    OUTFILE="$DENDRITE_DIR/${NOW}_todo-state.md"
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+    # Use SQLite-backed todoCli.ts dendrite command for structured output
+    if PROJECT="$PROJECT" npx --prefix "$SCRIPT_DIR/../desktop" tsx "$SCRIPT_DIR/../desktop/src/lib/todoCli.ts" dendrite > "$OUTFILE" 2>/dev/null; then
+        # Extract counts from YAML frontmatter for status line
+        ACTIVE_COUNT=$(sed -n 's/^active: //p' "$OUTFILE")
+        COMPLETED_COUNT=$(sed -n 's/^completed: //p' "$OUTFILE")
+        DEFERRED_COUNT=$(sed -n 's/^deferred: //p' "$OUTFILE")
+        DROPPED_COUNT=$(sed -n 's/^dropped: //p' "$OUTFILE")
+
+        # Append recent mutations from log
+        if [[ -f "$WORKSPACE/todos-log.md" ]]; then
+            echo "" >> "$OUTFILE"
+            echo "# Recent Mutations" >> "$OUTFILE"
+            if [[ -n "${CUTOFF:-}" ]]; then
+                while IFS= read -r logline; do
+                    LOG_TS=$(echo "$logline" | sed -n 's/^\[\([^]]*\)\].*/\1/p')
+                    if [[ -n "$LOG_TS" ]] && [[ "$LOG_TS" > "$CUTOFF" ]]; then
+                        echo "$logline" >> "$OUTFILE"
+                    fi
+                done < "$WORKSPACE/todos-log.md"
+            else
+                tail -20 "$WORKSPACE/todos-log.md" >> "$OUTFILE"
+            fi
+        fi
+
+        echo "  ✓ todo-state: ${ACTIVE_COUNT:-0} active, ${COMPLETED_COUNT:-0} done, ${DEFERRED_COUNT:-0} deferred, ${DROPPED_COUNT:-0} dropped"
+    else
+        echo "  · todo-state: failed to generate (tsx/todoDb error)"
+        rm -f "$OUTFILE"
+    fi
 fi
 
 # NOTE: .last-collection is NOT updated here.

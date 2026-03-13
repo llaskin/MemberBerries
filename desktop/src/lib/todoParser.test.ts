@@ -44,6 +44,7 @@ describe('parseTodos', () => {
       status: 'active',
       priority: 'high',
       created: '2026-03-13',
+      tags: undefined,
       completed: undefined,
       deferred: undefined,
       dropped: undefined,
@@ -122,6 +123,68 @@ updated_at: 2026-03-13T00:00:00Z
     expect(state.items[0].notes).toBeUndefined()
   })
 
+  it('parses critical priority', () => {
+    const state = parseTodos(`---
+type: todos
+project: test
+updated_at: 2026-03-13T00:00:00Z
+---
+
+## Active
+- [ ] #1 Urgent task [created: 2026-03-13] [priority: critical]
+
+## Completed
+
+## Deferred
+
+## Dropped
+`)
+    expect(state.items[0].priority).toBe('critical')
+  })
+
+  it('parses single tag', () => {
+    const state = parseTodos(`---
+type: todos
+project: test
+updated_at: 2026-03-13T00:00:00Z
+---
+
+## Active
+- [ ] #1 Tagged task [created: 2026-03-13] [priority: high] [tag: cli]
+
+## Completed
+
+## Deferred
+
+## Dropped
+`)
+    expect(state.items[0].tags).toEqual(['cli'])
+  })
+
+  it('parses multiple tags', () => {
+    const state = parseTodos(`---
+type: todos
+project: test
+updated_at: 2026-03-13T00:00:00Z
+---
+
+## Active
+- [ ] #1 Multi-tag task [created: 2026-03-13] [priority: high] [tag: cli] [tag: tier-0]
+
+## Completed
+
+## Deferred
+
+## Dropped
+`)
+    expect(state.items[0].tags).toEqual(['cli', 'tier-0'])
+  })
+
+  it('items without tags have undefined tags', () => {
+    const state = parseTodos(SAMPLE_TODOS)
+    expect(state.items[0].tags).toBeUndefined()
+  })
+
   it('defaults priority to medium when missing', () => {
     const state = parseTodos(`---
 type: todos
@@ -172,6 +235,23 @@ describe('serializeTodos', () => {
     expect(serialized).toContain('    Line two')
     const reparsed = parseTodos(serialized)
     expect(reparsed.items[0].notes).toBe('Line one\nLine two')
+  })
+
+  it('round-trips tags through parse and serialize', () => {
+    const state: TodoState = {
+      project: 'test',
+      updatedAt: '2026-03-13T00:00:00Z',
+      items: [
+        { id: 1, description: 'Tagged task', status: 'active', priority: 'critical', created: '2026-03-13', tags: ['cli', 'tier-0'] },
+      ],
+    }
+    const serialized = serializeTodos(state)
+    expect(serialized).toContain('[tag: cli]')
+    expect(serialized).toContain('[tag: tier-0]')
+    expect(serialized).toContain('[priority: critical]')
+    const reparsed = parseTodos(serialized)
+    expect(reparsed.items[0].tags).toEqual(['cli', 'tier-0'])
+    expect(reparsed.items[0].priority).toBe('critical')
   })
 
   it('groups items by status section', () => {

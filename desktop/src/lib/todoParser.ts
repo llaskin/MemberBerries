@@ -1,12 +1,13 @@
 // todoParser.ts — Parse/serialize todos.md ↔ TypeScript types
 
 export type TodoStatus = 'active' | 'completed' | 'deferred' | 'dropped'
-export type TodoPriority = 'high' | 'medium' | 'low'
+export type TodoPriority = 'critical' | 'high' | 'medium' | 'low'
 
 export interface TodoItem {
   id: number
   description: string
   notes?: string        // Multi-line notes (indented continuation lines)
+  tags?: string[]       // Multiple [tag: x] brackets
   status: TodoStatus
   priority: TodoPriority
   created: string       // YYYY-MM-DD
@@ -53,12 +54,17 @@ function parseLine(line: string, sectionStatus: TodoStatus): TodoItem | null {
   const id = parseInt(match[2], 10)
   let rest = match[3]
 
-  // Extract bracketed metadata
+  // Extract bracketed metadata (tag is special — can appear multiple times)
   const meta: Record<string, string> = {}
+  const tags: string[] = []
   const metaRegex = /\[(\w+):\s*([^\]]+)\]/g
   let m
   while ((m = metaRegex.exec(rest)) !== null) {
-    meta[m[1]] = m[2].trim()
+    if (m[1] === 'tag') {
+      tags.push(m[2].trim())
+    } else {
+      meta[m[1]] = m[2].trim()
+    }
   }
 
   // Description is everything before the first [key: value]
@@ -69,6 +75,7 @@ function parseLine(line: string, sectionStatus: TodoStatus): TodoItem | null {
   return {
     id,
     description: desc,
+    tags: tags.length > 0 ? tags : undefined,
     status,
     priority: (meta.priority as TodoPriority) || 'medium',
     created: meta.created || '',
@@ -145,6 +152,11 @@ export function serializeTodos(state: TodoState): string {
     if (item.deferred) line += ` [deferred: ${item.deferred}]`
     if (item.dropped) line += ` [dropped: ${item.dropped}]`
     if (item.reason) line += ` [reason: ${item.reason}]`
+    if (item.tags) {
+      for (const tag of item.tags) {
+        line += ` [tag: ${tag}]`
+      }
+    }
 
     sections[item.status].push(line)
     if (item.notes) {
