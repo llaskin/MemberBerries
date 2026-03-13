@@ -334,7 +334,7 @@ export function axonDevApi(): Plugin {
               req.on('data', (chunk: Buffer) => { data += chunk.toString() })
               req.on('end', () => resolve(data))
             })
-            const { description, priority = 'medium' } = JSON.parse(body) as { description: string; priority?: string }
+            const { description, priority = 'medium', notes } = JSON.parse(body) as { description: string; priority?: string; notes?: string }
 
             // Read existing or create
             let content = ''
@@ -346,10 +346,15 @@ export function axonDevApi(): Plugin {
             const ids = [...content.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10))
             const nextId = ids.length > 0 ? Math.max(...ids) + 1 : 1
 
-            const newLine = `- [ ] #${nextId} ${description} [created: ${today}] [priority: ${priority}]`
+            let newBlock = `- [ ] #${nextId} ${description} [created: ${today}] [priority: ${priority}]`
+            if (notes) {
+              for (const noteLine of notes.split('\n')) {
+                newBlock += `\n    ${noteLine}`
+              }
+            }
 
             // Insert after ## Active
-            content = content.replace(/^(## Active\n)/m, `$1${newLine}\n`)
+            content = content.replace(/^(## Active\n)/m, `$1${newBlock}\n`)
             content = content.replace(/^updated_at: .*/m, `updated_at: ${now}`)
 
             writeFileSync(todosPath, content)
@@ -382,7 +387,7 @@ export function axonDevApi(): Plugin {
               req.on('data', (chunk: Buffer) => { data += chunk.toString() })
               req.on('end', () => resolve(data))
             })
-            const { action, reason, priority } = JSON.parse(body) as { action: string; reason?: string; priority?: string }
+            const { action, reason, priority, notes: newNotes } = JSON.parse(body) as { action: string; reason?: string; priority?: string; notes?: string }
 
             let content = ''
             try { content = await readFile(todosPath, 'utf-8') } catch {
@@ -391,21 +396,36 @@ export function axonDevApi(): Plugin {
               return
             }
 
-            // Find the line with this ID
-            const lineRegex = new RegExp(`^- \\[.\\] #${itemId}\\s+(.+)$`, 'm')
-            const lineMatch = content.match(lineRegex)
-            if (!lineMatch) {
+            // Find the line with this ID + any indented notes below it
+            const lines = content.split('\n')
+            const itemLineIdx = lines.findIndex(l => new RegExp(`^- \\[.\\] #${itemId}\\s+`).test(l))
+            if (itemLineIdx === -1) {
               res.statusCode = 404
               res.end(JSON.stringify({ error: `Todo #${itemId} not found` }))
               return
             }
 
-            const rest = lineMatch[1]
+            const itemLine = lines[itemLineIdx]
+            const rest = itemLine.replace(/^- \[.\] #\d+\s+/, '')
             const desc = rest.replace(/\s*\[\w+:\s*[^\]]+\]/g, '').trim()
 
-            // Remove old line
-            content = content.replace(lineRegex, '##REMOVE##')
-            content = content.split('\n').filter(l => l !== '##REMOVE##').join('\n')
+            // Collect existing notes (indented continuation lines)
+            const existingNotes: string[] = []
+            let j = itemLineIdx + 1
+            while (j < lines.length && /^    \S/.test(lines[j])) {
+              existingNotes.push(lines[j].slice(4))
+              j++
+            }
+
+            // Remove old line + notes
+            lines.splice(itemLineIdx, j - itemLineIdx)
+            content = lines.join('\n')
+
+            // Use new notes if provided, otherwise preserve existing
+            const notes = newNotes !== undefined ? newNotes : existingNotes.join('\n') || undefined
+
+            // Build note lines suffix
+            const notesSuffix = notes ? '\n' + notes.split('\n').map((l: string) => `    ${l}`).join('\n') : ''
 
             let newLine = ''
             let logAction = action.toUpperCase()
@@ -413,21 +433,21 @@ export function axonDevApi(): Plugin {
             switch (action) {
               case 'complete':
                 newLine = `- [x] #${itemId} ${desc} [created: ${today}] [completed: ${today}]`
-                content = content.replace(/^(## Completed\n)/m, `$1${newLine}\n`)
+                content = content.replace(/^(## Completed\n)/m, `$1${newLine}${notesSuffix}\n`)
                 break
               case 'defer':
                 newLine = `- [>] #${itemId} ${desc} [created: ${today}] [deferred: ${today}]`
                 if (reason) newLine += ` [reason: ${reason}]`
-                content = content.replace(/^(## Deferred\n)/m, `$1${newLine}\n`)
+                content = content.replace(/^(## Deferred\n)/m, `$1${newLine}${notesSuffix}\n`)
                 break
               case 'drop':
                 newLine = `- [-] #${itemId} ${desc} [created: ${today}] [dropped: ${today}]`
                 if (reason) newLine += ` [reason: ${reason}]`
-                content = content.replace(/^(## Dropped\n)/m, `$1${newLine}\n`)
+                content = content.replace(/^(## Dropped\n)/m, `$1${newLine}${notesSuffix}\n`)
                 break
               case 'reactivate':
                 newLine = `- [ ] #${itemId} ${desc} [created: ${today}] [priority: ${priority || 'medium'}]`
-                content = content.replace(/^(## Active\n)/m, `$1${newLine}\n`)
+                content = content.replace(/^(## Active\n)/m, `$1${newLine}${notesSuffix}\n`)
                 logAction = 'REACTIVATE'
                 break
               case 'reprioritise':
@@ -437,8 +457,24 @@ export function axonDevApi(): Plugin {
                   return
                 }
                 newLine = `- [ ] #${itemId} ${desc} [created: ${today}] [priority: ${priority}]`
-                content = content.replace(/^(## Active\n)/m, `$1${newLine}\n`)
+                content = content.replace(/^(## Active\n)/m, `$1${newLine}${notesSuffix}\n`)
                 logAction = 'REPRIORITISE'
+                break
+              case 'add-notes':
+                // Just re-insert with updated notes
+                newLine = itemLine
+                content = lines.join('\n') // restore without the spliced lines, re-insert at original section
+                // Actually we already removed, re-parse to find section and re-insert
+                {
+                  const sectionRegex = /^## (Active|Completed|Deferred|Dropped)/
+                  // Find which section this was in by looking at marker
+                  const marker = itemLine.match(/^- \[(.)\]/)?.[1]
+                  const sectionMap: Record<string, string> = { ' ': 'Active', 'x': 'Completed', '>': 'Deferred', '-': 'Dropped' }
+                  const section = sectionMap[marker || ' '] || 'Active'
+                  const notesBlock = newNotes ? '\n' + newNotes.split('\n').map((l: string) => `    ${l}`).join('\n') : ''
+                  content = content.replace(new RegExp(`^(## ${section}\\n)`, 'm'), `$1${newLine}${notesBlock}\n`)
+                }
+                logAction = 'NOTES'
                 break
               default:
                 res.statusCode = 400

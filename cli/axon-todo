@@ -88,6 +88,7 @@ log_mutation() {
 cmd_add() {
     local priority="medium"
     local desc=""
+    local notes=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -99,6 +100,9 @@ cmd_add() {
                     exit 1
                 fi
                 shift 2 ;;
+            --notes|-n)
+                [[ $# -lt 2 ]] && { echo "Error: --notes requires a value"; exit 1; }
+                notes="$2"; shift 2 ;;
             *)
                 if [[ -z "$desc" ]]; then
                     desc="$1"
@@ -110,7 +114,7 @@ cmd_add() {
     done
 
     if [[ -z "$desc" ]]; then
-        echo "Usage: axon todo add \"task description\" [--priority high|medium|low]"
+        echo "Usage: axon todo add \"task description\" [--priority high|medium|low] [--notes \"details\"]"
         exit 1
     fi
 
@@ -118,13 +122,20 @@ cmd_add() {
 
     local id
     id=$(next_id)
-    local new_line="- [ ] #$id $desc [created: $TODAY] [priority: $priority]"
+    local new_block="- [ ] #$id $desc [created: $TODAY] [priority: $priority]"
+    # Append notes as indented continuation lines
+    if [[ -n "$notes" ]]; then
+        while IFS= read -r noteline; do
+            new_block="$new_block
+    $noteline"
+        done <<< "$notes"
+    fi
 
     # Insert after ## Active heading
     local content
     content=$(cat "$TODOS_FILE")
-    content=$(echo "$content" | awk -v line="$new_line" '
-        /^## Active/ { print; print line; next }
+    content=$(echo "$content" | awk -v block="$new_block" '
+        /^## Active/ { print; print block; next }
         { print }
     ')
     content=$(update_timestamp "$content")
@@ -133,6 +144,7 @@ cmd_add() {
     log_mutation "ADD" "$id" "$desc" "priority=$priority"
 
     echo "Added #$id: $desc [priority: $priority]"
+    [[ -n "$notes" ]] && echo "  Notes: $notes"
 }
 
 cmd_done() {
@@ -390,6 +402,61 @@ cmd_reprioritise() {
     echo "Reprioritised #$id to $new_priority: $desc"
 }
 
+cmd_note() {
+    local id="${1:-}"
+    shift || true
+    local note_text="$*"
+
+    if [[ -z "$id" || -z "$note_text" ]]; then
+        echo "Usage: axon todo note <id> \"note text\""
+        exit 1
+    fi
+    id="${id#\#}"
+
+    if [[ ! -f "$TODOS_FILE" ]]; then
+        echo "No todos.md found."
+        exit 1
+    fi
+
+    # Find the line number of the item
+    local line_num
+    line_num=$(grep -n "#$id " "$TODOS_FILE" | head -1 | cut -d: -f1)
+    if [[ -z "$line_num" ]]; then
+        echo "Error: todo #$id not found"
+        exit 1
+    fi
+
+    local desc
+    desc=$(sed -n "${line_num}p" "$TODOS_FILE" | sed "s/.*#$id //" | sed 's/ \[.*//')
+
+    # Insert note line after the item (and any existing notes)
+    local content
+    content=$(cat "$TODOS_FILE")
+    local insert_after=$line_num
+    local total_lines
+    total_lines=$(echo "$content" | wc -l)
+    # Skip past existing indented note lines
+    while [[ $insert_after -lt $total_lines ]]; do
+        local next_line
+        next_line=$(echo "$content" | sed -n "$((insert_after + 1))p")
+        if [[ "$next_line" =~ ^[[:space:]]{4}[^[:space:]] ]]; then
+            insert_after=$((insert_after + 1))
+        else
+            break
+        fi
+    done
+
+    # Insert the note at the right position
+    local note_line="    $note_text"
+    content=$(echo "$content" | awk -v n="$insert_after" -v line="$note_line" 'NR==n{print; print line; next} {print}')
+    content=$(update_timestamp "$content")
+    atomic_write "$TODOS_FILE" "$content"
+
+    log_mutation "NOTE" "$id" "$desc" "note=\"$note_text\""
+
+    echo "Added note to #$id: $note_text"
+}
+
 # ---- DISPATCH ----
 
 usage() {
@@ -397,17 +464,20 @@ usage() {
 Usage: axon todo <command> [args]
 
 Commands:
-  add "task" [--priority high|medium|low]   Add a new todo item
+  add "task" [--priority high|medium|low] [--notes "detail"]
+                                            Add a new todo item
   done <id>                                 Mark item as completed
   defer <id> [--reason "why"]               Defer item to backlog
   drop <id> [--reason "why"]                Drop item permanently
   list [active|backlog|done|all]            List items (default: active)
   reprioritise <id> <high|medium|low>       Change item priority
+  note <id> "note text"                     Add a note to an item
 
 Examples:
   axon todo add "Implement CLAUDE.md bridge" --priority high
+  axon todo add "Fix bug" --notes "Happens on page reload"
+  axon todo note 1 "Need to check edge cases"
   axon todo done 1
-  axon todo defer 4 --reason "post-launch"
   axon todo list all
 EOF
     exit 1
@@ -425,5 +495,6 @@ case "$SUBCMD" in
     list|ls)    cmd_list "${SUBARGS[0]:-active}" ;;
     reprioritise|reprioritize|repri)
                 cmd_reprioritise "${SUBARGS[0]:-}" "${SUBARGS[1]:-}" ;;
+    note)       cmd_note "${SUBARGS[@]+"${SUBARGS[@]}"}" ;;
     *)          usage ;;
 esac

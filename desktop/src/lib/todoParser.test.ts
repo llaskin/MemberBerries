@@ -96,6 +96,32 @@ updated_at: 2026-03-13T00:00:00Z
     expect(state.project).toBe('test')
   })
 
+  it('parses indented continuation lines as notes', () => {
+    const state = parseTodos(`---
+type: todos
+project: test
+updated_at: 2026-03-13T00:00:00Z
+---
+
+## Active
+- [ ] #1 Task with notes [created: 2026-03-13] [priority: high]
+    First note line
+    Second note line
+
+## Completed
+
+## Deferred
+
+## Dropped
+`)
+    expect(state.items[0].notes).toBe('First note line\nSecond note line')
+  })
+
+  it('handles items without notes', () => {
+    const state = parseTodos(SAMPLE_TODOS)
+    expect(state.items[0].notes).toBeUndefined()
+  })
+
   it('defaults priority to medium when missing', () => {
     const state = parseTodos(`---
 type: todos
@@ -131,6 +157,21 @@ describe('serializeTodos', () => {
       expect(reparsed.items[i].description).toBe(state.items[i].description)
       expect(reparsed.items[i].status).toBe(state.items[i].status)
     }
+  })
+
+  it('round-trips notes through parse and serialize', () => {
+    const state: TodoState = {
+      project: 'test',
+      updatedAt: '2026-03-13T00:00:00Z',
+      items: [
+        { id: 1, description: 'Task with notes', status: 'active', priority: 'high', created: '2026-03-13', notes: 'Line one\nLine two' },
+      ],
+    }
+    const serialized = serializeTodos(state)
+    expect(serialized).toContain('    Line one')
+    expect(serialized).toContain('    Line two')
+    const reparsed = parseTodos(serialized)
+    expect(reparsed.items[0].notes).toBe('Line one\nLine two')
   })
 
   it('groups items by status section', () => {

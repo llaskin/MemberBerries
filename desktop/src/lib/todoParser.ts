@@ -6,6 +6,7 @@ export type TodoPriority = 'high' | 'medium' | 'low'
 export interface TodoItem {
   id: number
   description: string
+  notes?: string        // Multi-line notes (indented continuation lines)
   status: TodoStatus
   priority: TodoPriority
   created: string       // YYYY-MM-DD
@@ -102,7 +103,7 @@ export function parseTodos(content: string): TodoState {
     }
   }
 
-  // Parse sections
+  // Parse sections (collect indented lines as notes)
   for (const line of lines) {
     const sectionMatch = line.match(/^## (Active|Completed|Deferred|Dropped)/)
     if (sectionMatch) {
@@ -113,6 +114,11 @@ export function parseTodos(content: string): TodoState {
     if (line.startsWith('- [')) {
       const item = parseLine(line, currentSection)
       if (item) items.push(item)
+    } else if (/^    \S/.test(line) && items.length > 0) {
+      // Indented continuation line → append to last item's notes
+      const last = items[items.length - 1]
+      const noteLine = line.slice(4) // strip 4-space indent
+      last.notes = last.notes ? last.notes + '\n' + noteLine : noteLine
     }
   }
 
@@ -141,6 +147,11 @@ export function serializeTodos(state: TodoState): string {
     if (item.reason) line += ` [reason: ${item.reason}]`
 
     sections[item.status].push(line)
+    if (item.notes) {
+      for (const noteLine of item.notes.split('\n')) {
+        sections[item.status].push(`    ${noteLine}`)
+      }
+    }
   }
 
   return `---

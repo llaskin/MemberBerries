@@ -58,7 +58,7 @@ function useTodos(project: string | null) {
     fetchTodos()
   }, [project, fetchTodos])
 
-  const updateTodo = useCallback(async (id: number, action: string, extra?: { reason?: string; priority?: string }) => {
+  const updateTodo = useCallback(async (id: number, action: string, extra?: { reason?: string; priority?: string; notes?: string }) => {
     if (!project) return
     await fetch(`/api/axon/projects/${encodeURIComponent(project)}/todos/${id}`, {
       method: 'PATCH',
@@ -203,14 +203,34 @@ function DispatchPopover({ onClose }: { onClose: () => void }) {
 
 function TodoCard({ item, onUpdate }: {
   item: TodoItem
-  onUpdate: (id: number, action: string, extra?: { reason?: string; priority?: string }) => void
+  onUpdate: (id: number, action: string, extra?: { reason?: string; priority?: string; notes?: string }) => void
 }) {
-  const [hovered, setHovered] = useState(false)
   const [showDispatch, setShowDispatch] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesText, setNotesText] = useState(item.notes || '')
+  const notesRef = useRef<HTMLTextAreaElement>(null)
   const age = daysAgo(item.created)
   const isStale = age > 3 && item.status === 'active'
   const isCompleted = item.status === 'completed'
   const isInactive = item.status === 'deferred' || item.status === 'dropped'
+
+  useEffect(() => { setNotesText(item.notes || '') }, [item.notes])
+  useEffect(() => {
+    if (editingNotes && notesRef.current) {
+      notesRef.current.focus()
+      notesRef.current.style.height = 'auto'
+      notesRef.current.style.height = notesRef.current.scrollHeight + 'px'
+    }
+  }, [editingNotes])
+
+  const saveNotes = () => {
+    setEditingNotes(false)
+    const trimmed = notesText.trim()
+    if (trimmed !== (item.notes || '')) {
+      onUpdate(item.id, 'add-notes', { notes: trimmed || undefined })
+    }
+  }
 
   return (
     <div
@@ -218,8 +238,7 @@ function TodoCard({ item, onUpdate }: {
         ${isStale ? 'bg-ax-elevated border border-[var(--ax-brand-primary)]/20 shadow-[0_0_12px_-4px_var(--ax-brand-primary)]' : 'bg-ax-elevated border border-ax-border'}
         ${isCompleted || isInactive ? 'opacity-70' : ''}
         hover:shadow-md hover:border-ax-border`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setShowDispatch(false) }}
+      onMouseLeave={() => setShowDispatch(false)}
     >
       {/* Checkbox */}
       <button
@@ -251,10 +270,55 @@ function TodoCard({ item, onUpdate }: {
           {isStale && (
             <span className="font-mono text-micro text-ax-brand px-1.5 py-0.5 rounded bg-ax-brand-subtle">stale</span>
           )}
+          {item.notes && !expanded && (
+            <button onClick={() => setExpanded(true)} className="font-mono text-micro text-ax-text-ghost hover:text-ax-text-secondary">
+              +notes
+            </button>
+          )}
         </div>
-        <p className={`text-body mt-0.5 ${isCompleted ? 'line-through text-ax-text-tertiary' : 'text-ax-text-primary'}`}>
+        <p
+          className={`text-body mt-0.5 cursor-pointer ${isCompleted ? 'line-through text-ax-text-tertiary' : 'text-ax-text-primary'}`}
+          onClick={() => setExpanded(e => !e)}
+        >
           {item.description}
         </p>
+
+        {/* Notes section */}
+        {expanded && (
+          <div className="mt-2 ml-0.5">
+            {editingNotes ? (
+              <textarea
+                ref={notesRef}
+                value={notesText}
+                onChange={e => {
+                  setNotesText(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
+                onBlur={saveNotes}
+                onKeyDown={e => { if (e.key === 'Escape') saveNotes() }}
+                placeholder="Add notes..."
+                className="w-full bg-ax-sunken border border-ax-border-subtle rounded-lg px-3 py-2
+                  text-small text-ax-text-secondary placeholder:text-ax-text-ghost
+                  outline-none focus:border-ax-brand-primary/40 resize-none"
+                rows={2}
+              />
+            ) : (
+              <button
+                onClick={() => setEditingNotes(true)}
+                className="w-full text-left px-3 py-2 rounded-lg text-small
+                  hover:bg-ax-sunken transition-colors"
+              >
+                {item.notes ? (
+                  <span className="text-ax-text-secondary whitespace-pre-wrap">{item.notes}</span>
+                ) : (
+                  <span className="text-ax-text-ghost italic">Add notes...</span>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mt-1.5">
           {item.created && (
             <span className="font-mono text-micro text-ax-text-ghost">
@@ -274,50 +338,50 @@ function TodoCard({ item, onUpdate }: {
         </div>
       </div>
 
-      {/* Hover actions */}
-      {hovered && item.status === 'active' && (
-        <div className="flex items-center gap-1 shrink-0 animate-fade-in">
+      {/* Hover actions — absolutely positioned, CSS visibility */}
+      {item.status === 'active' && (
+        <div className="absolute right-3 top-2.5 flex items-center gap-0.5
+          opacity-0 group-hover:opacity-100 transition-opacity duration-150
+          bg-ax-elevated/90 backdrop-blur-sm rounded-lg p-0.5 border border-ax-border-subtle shadow-sm">
           <button
             onClick={() => onUpdate(item.id, 'defer')}
             title="Defer to backlog"
-            className="p-1.5 rounded-lg text-ax-text-ghost hover:text-ax-text-secondary hover:bg-ax-sunken transition-colors"
+            className="p-1.5 rounded-md text-ax-text-ghost hover:text-ax-text-secondary hover:bg-ax-sunken transition-colors"
           >
-            <Archive size={14} />
+            <Archive size={13} />
           </button>
           <button
             onClick={() => onUpdate(item.id, 'drop')}
             title="Drop"
-            className="p-1.5 rounded-lg text-ax-text-ghost hover:text-ax-error hover:bg-ax-sunken transition-colors"
+            className="p-1.5 rounded-md text-ax-text-ghost hover:text-ax-error hover:bg-ax-sunken transition-colors"
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
           </button>
-          {/* Priority up/down */}
           {item.priority !== 'high' && (
             <button
               onClick={() => onUpdate(item.id, 'reprioritise', { priority: item.priority === 'low' ? 'medium' : 'high' })}
               title="Increase priority"
-              className="p-1.5 rounded-lg text-ax-text-ghost hover:text-ax-brand hover:bg-ax-sunken transition-colors"
+              className="p-1.5 rounded-md text-ax-text-ghost hover:text-ax-brand hover:bg-ax-sunken transition-colors"
             >
-              <ArrowUp size={14} />
+              <ArrowUp size={13} />
             </button>
           )}
           {item.priority !== 'low' && (
             <button
               onClick={() => onUpdate(item.id, 'reprioritise', { priority: item.priority === 'high' ? 'medium' : 'low' })}
               title="Decrease priority"
-              className="p-1.5 rounded-lg text-ax-text-ghost hover:text-ax-text-secondary hover:bg-ax-sunken transition-colors"
+              className="p-1.5 rounded-md text-ax-text-ghost hover:text-ax-text-secondary hover:bg-ax-sunken transition-colors"
             >
-              <ArrowDown size={14} />
+              <ArrowDown size={13} />
             </button>
           )}
-          {/* Dispatch stub */}
           <div className="relative">
             <button
               onClick={() => setShowDispatch(o => !o)}
               title="Agent dispatch"
-              className="p-1.5 rounded-lg text-ax-text-ghost hover:text-ax-warning hover:bg-ax-sunken transition-colors"
+              className="p-1.5 rounded-md text-ax-text-ghost hover:text-ax-warning hover:bg-ax-sunken transition-colors"
             >
-              <Zap size={14} />
+              <Zap size={13} />
             </button>
             {showDispatch && <DispatchPopover onClose={() => setShowDispatch(false)} />}
           </div>
@@ -325,14 +389,17 @@ function TodoCard({ item, onUpdate }: {
       )}
 
       {/* Reactivate for deferred/dropped */}
-      {hovered && isInactive && (
-        <button
-          onClick={() => onUpdate(item.id, 'reactivate')}
-          title="Reactivate"
-          className="p-1.5 rounded-lg text-ax-text-ghost hover:text-ax-accent hover:bg-ax-sunken transition-colors shrink-0 animate-fade-in"
-        >
-          <RotateCcw size={14} />
-        </button>
+      {isInactive && (
+        <div className="absolute right-3 top-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <button
+            onClick={() => onUpdate(item.id, 'reactivate')}
+            title="Reactivate"
+            className="p-1.5 rounded-lg text-ax-text-ghost hover:text-ax-accent hover:bg-ax-sunken transition-colors
+              bg-ax-elevated/90 backdrop-blur-sm border border-ax-border-subtle shadow-sm"
+          >
+            <RotateCcw size={13} />
+          </button>
+        </div>
       )}
     </div>
   )
