@@ -30,7 +30,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const dir = oldIdx === -1 || newIdx === -1 ? null
       : newIdx > oldIdx ? 'down' : 'up'
     set({ activeProject: name, swipeDirection: dir as any })
-    setTimeout(() => set({ swipeDirection: null }), 350)
+    setTimeout(() => set({ swipeDirection: null }), 450)
   },
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error, loading: false }),

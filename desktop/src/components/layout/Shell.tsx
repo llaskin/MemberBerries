@@ -28,7 +28,7 @@ export function Shell({ children }: { children: ReactNode }) {
         swipeDirection === 'down' ? 'animate-slide-up-in' :
         swipeDirection === 'up' ? 'animate-slide-down-in' : ''
       )
-      const t = setTimeout(() => setAnimClass(''), 320)
+      const t = setTimeout(() => setAnimClass(''), 450)
       prevProjectRef.current = activeProject
       return () => clearTimeout(t)
     }
