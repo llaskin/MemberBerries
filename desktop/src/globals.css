@@ -293,6 +293,22 @@ body {
   animation: slideInFromLeft 0.25s ease-out both;
 }
 
+/* Vertical project switch transitions */
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateY(60px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideDownIn {
+  from { opacity: 0; transform: translateY(-60px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up-in {
+  animation: slideUpIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-slide-down-in {
+  animation: slideDownIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Onboarding step transitions */
 @keyframes stepForward {
   from { opacity: 0; transform: translateX(24px); }

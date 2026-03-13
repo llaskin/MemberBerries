@@ -60,22 +60,34 @@ function CarouselPane({
 // of the main carousel (e.g. dedicated Terminal view).
 
 function PersistentView({
-  active, fullBleed, children,
+  active, fullBleed, swipeDir, children,
 }: {
   active: boolean
   fullBleed?: boolean
+  swipeDir: 'left' | 'right' | 'none'
   children: ReactNode
 }) {
   const [everActive, setEverActive] = useState(false)
+  const [animClass, setAnimClass] = useState('')
+
   useEffect(() => {
     if (active && !everActive) setEverActive(true)
-  }, [active, everActive])
+    if (active) {
+      setAnimClass(
+        swipeDir === 'right' ? 'animate-slide-right'
+        : swipeDir === 'left' ? 'animate-slide-left'
+        : 'animate-fade-in'
+      )
+      const t = setTimeout(() => setAnimClass(''), 300)
+      return () => clearTimeout(t)
+    }
+  }, [active, swipeDir])
 
   if (!everActive) return null
 
   return (
     <div
-      className={active ? '' : 'hidden'}
+      className={`${active ? '' : 'hidden'} ${animClass}`}
       style={{ height: '100%' }}
     >
       <div className={fullBleed ? 'h-full' : 'max-w-3xl mx-auto px-8 py-10 overflow-y-auto h-full'}>
@@ -132,6 +144,7 @@ function CarouselNav({ activeView }: { activeView: ViewId }) {
 
 function ViewRouter() {
   const activeView = useUIStore(s => s.activeView)
+  const swipeDir = useUIStore(s => s.viewSwipeDirection)
 
   // Carousel index tracking
   const carouselIdx = CAROUSEL.indexOf(activeView)
@@ -167,13 +180,17 @@ function ViewRouter() {
       </div>
 
       {/* Terminal — persistent overlay (stays mounted once visited) */}
-      <PersistentView active={activeView === 'terminal'} fullBleed>
+      <PersistentView active={activeView === 'terminal'} fullBleed swipeDir={swipeDir}>
         <AgentView />
       </PersistentView>
 
       {/* Non-persistent, non-carousel views — standard mount/unmount */}
       {!isCarousel && activeView !== 'terminal' && (
-        <div className="max-w-3xl mx-auto px-8 py-10 overflow-y-auto h-full animate-fade-in">
+        <div className={`max-w-3xl mx-auto px-8 py-10 overflow-y-auto h-full ${
+          swipeDir === 'right' ? 'animate-slide-right'
+          : swipeDir === 'left' ? 'animate-slide-left'
+          : 'animate-fade-in'
+        }`}>
           {activeView === 'rollup-detail' && <RollupDetailView />}
           {activeView === 'state' && <StateView />}
           {activeView === 'decisions' && <DecisionsView />}
