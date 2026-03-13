@@ -1,12 +1,13 @@
 import type { Plugin } from 'vite'
 import { readdir, readFile } from 'fs/promises'
-import { existsSync, writeFileSync, renameSync, mkdirSync, appendFileSync } from 'fs'
+import { existsSync, writeFileSync, renameSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { homedir } from 'os'
 import { spawn, execSync } from 'child_process'
 import { WebSocketServer } from 'ws'
 import { spawnTerminal, hasTerminal, killTerminal, killAllTerminals } from './src/lib/terminalManager'
 import { setupTerminalWs } from './src/lib/terminalWs'
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 
 /* ── Classify Claude stream-json messages into typed SSE events ── */
 
@@ -210,7 +211,7 @@ export function axonDevApi(): Plugin {
 
           // GET /api/axon/projects/:name/config
           const configMatch = req.url.match(/^\/api\/axon\/projects\/([^/]+)\/config$/)
-          if (configMatch) {
+          if (configMatch && req.method === 'GET') {
             const project = decodeURIComponent(configMatch[1])
             try {
               const content = await readFile(join(AXON_HOME, 'workspaces', project, 'config.yaml'), 'utf-8')
@@ -218,6 +219,61 @@ export function axonDevApi(): Plugin {
             } catch {
               res.end(JSON.stringify({ content: '' }))
             }
+            return
+          }
+
+          // PATCH /api/axon/projects/:name/config
+          if (configMatch && req.method === 'PATCH') {
+            const project = decodeURIComponent(configMatch[1])
+            const configPath = join(AXON_HOME, 'workspaces', project, 'config.yaml')
+            let body = ''
+            req.on('data', (c: Buffer) => { body += c.toString() })
+            req.on('end', () => {
+              try {
+                const patch = JSON.parse(body)
+                const raw = readFileSync(configPath, 'utf-8')
+                const cfg = parseYaml(raw) as Record<string, unknown>
+
+                // Merge top-level scalars
+                if (patch.status !== undefined) cfg.status = patch.status
+                if (patch.timezone !== undefined) cfg.timezone = patch.timezone
+
+                // user_context: null removes it, string sets it
+                if (patch.user_context === null) {
+                  delete cfg.user_context
+                } else if (typeof patch.user_context === 'string') {
+                  cfg.user_context = patch.user_context
+                }
+
+                // Deep merge dendrites
+                if (patch.dendrites && typeof patch.dendrites === 'object') {
+                  const dend = (cfg.dendrites || {}) as Record<string, Record<string, unknown>>
+                  for (const [key, val] of Object.entries(patch.dendrites as Record<string, Record<string, unknown>>)) {
+                    if (!dend[key]) dend[key] = {}
+                    Object.assign(dend[key], val)
+                  }
+                  cfg.dendrites = dend
+                }
+
+                // Deep merge rollup
+                if (patch.rollup && typeof patch.rollup === 'object') {
+                  const roll = (cfg.rollup || {}) as Record<string, unknown>
+                  Object.assign(roll, patch.rollup)
+                  cfg.rollup = roll
+                }
+
+                // Atomic write
+                const tmpPath = configPath + '.tmp.' + Date.now()
+                writeFileSync(tmpPath, stringifyYaml(cfg, { lineWidth: 0 }))
+                renameSync(tmpPath, configPath)
+
+                res.writeHead(200, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ ok: true }))
+              } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ error: String(e) }))
+              }
+            })
             return
           }
 
@@ -952,9 +1008,10 @@ export function axonDevApi(): Plugin {
               req.on('end', () => resolve(data))
             })
 
-            const { projectName, projectPath } = JSON.parse(body) as {
+            const { projectName, projectPath, userContext } = JSON.parse(body) as {
               projectName: string
               projectPath: string
+              userContext?: string
             }
 
             res.setHeader('Content-Type', 'text/event-stream')
@@ -969,7 +1026,7 @@ export function axonDevApi(): Plugin {
 
             const child = spawn(initScript, [], {
               stdio: ['ignore', 'pipe', 'pipe'],
-              env: { ...cleanEnv, PROJECT: projectName, PROJECT_PATH: projectPath, AXON_HOME },
+              env: { ...cleanEnv, PROJECT: projectName, PROJECT_PATH: projectPath, AXON_HOME, ...(userContext ? { USER_CONTEXT: userContext } : {}) },
               cwd: projectPath,
             })
 

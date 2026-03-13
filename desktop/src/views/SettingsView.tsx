@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { parse as parseYaml } from 'yaml'
 import { useProjectStore } from '@/store/projectStore'
 import { useBackend } from '@/providers/DataProvider'
 import { formatDate } from '@/lib/utils'
@@ -9,48 +10,64 @@ interface ProjectConfig {
   createdAt: string
   status: string
   timezone: string
+  userContext: string
   dendrites: Record<string, { enabled: boolean; maxCommits?: number }>
   rollup: { autoCollect: boolean; contextWindow: number; model: string }
 }
 
 function parseConfig(content: string): ProjectConfig {
-  const config: ProjectConfig = {
+  const defaults: ProjectConfig = {
     project: '',
     projectPath: '',
     createdAt: '',
     status: 'active',
     timezone: '',
+    userContext: '',
     dendrites: {},
     rollup: { autoCollect: true, contextWindow: 3, model: 'claude-opus-4-6' },
   }
+  if (!content) return defaults
 
-  if (!content) return config
+  try {
+    const raw = parseYaml(content) as Record<string, unknown>
+    defaults.project = String(raw.project || '')
+    defaults.projectPath = String(raw.project_path || '')
+    defaults.createdAt = String(raw.created_at || '')
+    defaults.status = String(raw.status || 'active')
+    defaults.timezone = String(raw.timezone || '')
+    defaults.userContext = String(raw.user_context || '')
 
-  config.project = content.match(/^project:\s*(.+)$/m)?.[1]?.trim() || ''
-  config.projectPath = content.match(/^project_path:\s*(.+)$/m)?.[1]?.trim() || ''
-  config.createdAt = content.match(/^created_at:\s*(.+)$/m)?.[1]?.trim() || ''
-  config.status = content.match(/^status:\s*(.+)$/m)?.[1]?.trim() || 'active'
-  config.timezone = content.match(/^timezone:\s*(.+)$/m)?.[1]?.trim() || ''
-
-  // Parse dendrites section
-  const dendriteBlock = content.match(/^dendrites:\n((?:\s+.+\n)*)/m)?.[1] || ''
-  const dendriteEntries = dendriteBlock.matchAll(/^\s{2}(\S+):\n\s+enabled:\s*(true|false)(?:\n\s+max_commits:\s*(\d+))?/gm)
-  for (const match of dendriteEntries) {
-    config.dendrites[match[1]] = {
-      enabled: match[2] === 'true',
-      ...(match[3] ? { maxCommits: parseInt(match[3]) } : {}),
+    if (raw.dendrites && typeof raw.dendrites === 'object') {
+      for (const [key, val] of Object.entries(raw.dendrites as Record<string, Record<string, unknown>>)) {
+        defaults.dendrites[key] = {
+          enabled: (val as Record<string, unknown>).enabled === true,
+          ...(typeof (val as Record<string, unknown>).max_commits === 'number'
+            ? { maxCommits: (val as Record<string, unknown>).max_commits as number }
+            : {}),
+        }
+      }
     }
+
+    if (raw.rollup && typeof raw.rollup === 'object') {
+      const r = raw.rollup as Record<string, unknown>
+      if (typeof r.auto_collect === 'boolean') defaults.rollup.autoCollect = r.auto_collect
+      if (typeof r.context_window === 'number') defaults.rollup.contextWindow = r.context_window
+      if (typeof r.model === 'string') defaults.rollup.model = r.model
+    }
+  } catch {
+    // Fall back to defaults on parse error
   }
 
-  // Parse rollup section
-  const autoCollect = content.match(/^\s+auto_collect:\s*(true|false)$/m)?.[1]
-  if (autoCollect) config.rollup.autoCollect = autoCollect === 'true'
-  const contextWindow = content.match(/^\s+context_window:\s*(\d+)$/m)?.[1]
-  if (contextWindow) config.rollup.contextWindow = parseInt(contextWindow)
-  const model = content.match(/^\s+model:\s*(.+)$/m)?.[1]?.trim()
-  if (model) config.rollup.model = model
+  return defaults
+}
 
-  return config
+async function patchConfig(project: string, patch: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/config`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+  if (!res.ok) throw new Error('Failed to update config')
 }
 
 function SettingsCard({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
@@ -59,6 +76,23 @@ function SettingsCard({ title, children, className = '' }: { title: string; chil
       <h3 className="font-mono text-micro uppercase tracking-widest text-ax-text-tertiary mb-3">{title}</h3>
       {children}
     </div>
+  )
+}
+
+function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={enabled}
+      onClick={() => onChange(!enabled)}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+        enabled ? 'bg-ax-success' : 'bg-ax-sunken'
+      }`}
+    >
+      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+        enabled ? 'translate-x-[18px]' : 'translate-x-[3px]'
+      }`} />
+    </button>
   )
 }
 
@@ -76,13 +110,18 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function SettingsView() {
-  const { projects, activeProject } = useProjectStore()
+  const { projects, activeProject, setProjects } = useProjectStore()
   const backend = useBackend()
   const [config, setConfig] = useState<ProjectConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  // User context editing state
+  const [contextDraft, setContextDraft] = useState('')
+  const [contextSaving, setContextSaving] = useState(false)
+  const contextLoaded = useRef(false)
+
+  const loadConfig = useCallback(() => {
     if (!activeProject) {
       setConfig(null)
       setLoading(false)
@@ -92,16 +131,90 @@ export function SettingsView() {
     setError(null)
     backend.getConfig(activeProject)
       .then(content => {
-        setConfig(parseConfig(content))
+        const parsed = parseConfig(content)
+        setConfig(parsed)
+        if (!contextLoaded.current) {
+          setContextDraft(parsed.userContext)
+          contextLoaded.current = true
+        }
         setLoading(false)
       })
       .catch(e => {
         setError(e instanceof Error ? e.message : 'Failed to load config')
         setLoading(false)
       })
-  }, [activeProject])
+  }, [activeProject, backend])
+
+  useEffect(() => {
+    contextLoaded.current = false
+    loadConfig()
+  }, [activeProject, loadConfig])
+
+  const handleDendriteToggle = async (name: string, enabled: boolean) => {
+    if (!config || !activeProject) return
+    // Optimistic update
+    const prev = { ...config.dendrites[name] }
+    setConfig({ ...config, dendrites: { ...config.dendrites, [name]: { ...prev, enabled } } })
+    try {
+      await patchConfig(activeProject, { dendrites: { [name]: { enabled } } })
+    } catch {
+      // Revert on error
+      setConfig(c => c ? { ...c, dendrites: { ...c.dendrites, [name]: prev } } : c)
+    }
+  }
+
+  const handleAutoCollectToggle = async (enabled: boolean) => {
+    if (!config || !activeProject) return
+    const prev = config.rollup.autoCollect
+    setConfig({ ...config, rollup: { ...config.rollup, autoCollect: enabled } })
+    try {
+      await patchConfig(activeProject, { rollup: { auto_collect: enabled } })
+    } catch {
+      setConfig(c => c ? { ...c, rollup: { ...c.rollup, autoCollect: prev } } : c)
+    }
+  }
+
+  const handleContextWindowChange = async (value: number) => {
+    if (!config || !activeProject) return
+    const prev = config.rollup.contextWindow
+    setConfig({ ...config, rollup: { ...config.rollup, contextWindow: value } })
+    try {
+      await patchConfig(activeProject, { rollup: { context_window: value } })
+    } catch {
+      setConfig(c => c ? { ...c, rollup: { ...c.rollup, contextWindow: prev } } : c)
+    }
+  }
+
+  const handleStatusChange = async (status: string) => {
+    if (!config || !activeProject) return
+    const prev = config.status
+    setConfig({ ...config, status })
+    try {
+      await patchConfig(activeProject, { status })
+      // Refresh project list so sidebar reflects the change
+      const updated = await backend.getProjects()
+      setProjects(updated)
+    } catch {
+      setConfig(c => c ? { ...c, status: prev } : c)
+    }
+  }
+
+  const handleContextSave = async () => {
+    if (!activeProject) return
+    setContextSaving(true)
+    try {
+      const value = contextDraft.trim()
+      await patchConfig(activeProject, { user_context: value || null })
+      setConfig(c => c ? { ...c, userContext: value } : c)
+    } catch {
+      // Silent fail — user can retry
+    } finally {
+      setContextSaving(false)
+    }
+  }
 
   const activeProjectData = projects.find(p => p.name === activeProject)
+  const contextDirty = config ? contextDraft.trim() !== config.userContext : false
 
   if (loading) {
     return (
@@ -155,7 +268,15 @@ export function SettingsView() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-small text-ax-text-tertiary">Status</span>
-            <StatusBadge status={config.status} />
+            <select
+              value={config.status}
+              onChange={e => handleStatusChange(e.target.value)}
+              className="font-mono text-micro px-2 py-0.5 rounded-full bg-ax-sunken text-ax-text-primary border-none outline-none cursor-pointer appearance-none text-right"
+            >
+              <option value="active">active</option>
+              <option value="paused">paused</option>
+              <option value="archived">archived</option>
+            </select>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-small text-ax-text-tertiary">Path</span>
@@ -174,7 +295,7 @@ export function SettingsView() {
 
       {/* Stats */}
       {activeProjectData && (
-        <SettingsCard title="Stats" className="mb-5 animate-fade-in-up" >
+        <SettingsCard title="Stats" className="mb-5 animate-fade-in-up">
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="font-mono text-h3 text-ax-text-primary">{activeProjectData.episodeCount}</div>
@@ -201,20 +322,14 @@ export function SettingsView() {
           {Object.entries(config.dendrites).map(([name, settings]) => (
             <div key={name} className="flex items-center justify-between py-2.5 border-b border-ax-border-subtle last:border-0">
               <div className="flex items-center gap-3">
-                <span className={`w-2 h-2 rounded-full ${settings.enabled ? 'bg-ax-success' : 'bg-ax-text-tertiary'}`} />
+                <span className={`w-2 h-2 rounded-full transition-colors ${settings.enabled ? 'bg-ax-success' : 'bg-ax-text-tertiary'}`} />
                 <span className="font-mono text-body text-ax-text-primary">{name}</span>
               </div>
               <div className="flex items-center gap-3">
                 {settings.maxCommits && (
                   <span className="font-mono text-micro text-ax-text-tertiary">max {settings.maxCommits}</span>
                 )}
-                <span className={`font-mono text-micro px-2 py-0.5 rounded-full ${
-                  settings.enabled
-                    ? 'bg-ax-success-subtle text-ax-success'
-                    : 'bg-ax-sunken text-ax-text-tertiary'
-                }`}>
-                  {settings.enabled ? 'on' : 'off'}
-                </span>
+                <Toggle enabled={settings.enabled} onChange={v => handleDendriteToggle(name, v)} />
               </div>
             </div>
           ))}
@@ -229,23 +344,50 @@ export function SettingsView() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-small text-ax-text-tertiary">Auto Collect</span>
-            <span className={`font-mono text-micro px-2 py-0.5 rounded-full ${
-              config.rollup.autoCollect
-                ? 'bg-ax-success-subtle text-ax-success'
-                : 'bg-ax-sunken text-ax-text-tertiary'
-            }`}>
-              {config.rollup.autoCollect ? 'on' : 'off'}
-            </span>
+            <Toggle enabled={config.rollup.autoCollect} onChange={handleAutoCollectToggle} />
           </div>
           <div className="flex items-center justify-between">
             <span className="text-small text-ax-text-tertiary">Context Window</span>
-            <span className="font-mono text-small text-ax-text-secondary">{config.rollup.contextWindow} episodes</span>
+            <select
+              value={config.rollup.contextWindow}
+              onChange={e => handleContextWindowChange(parseInt(e.target.value))}
+              className="font-mono text-small px-2 py-0.5 rounded bg-ax-sunken text-ax-text-primary border-none outline-none cursor-pointer"
+            >
+              {[1, 2, 3, 4, 5, 7, 10].map(n => (
+                <option key={n} value={n}>{n} episodes</option>
+              ))}
+            </select>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-small text-ax-text-tertiary">Model</span>
             <span className="font-mono text-small text-ax-text-secondary">{config.rollup.model}</span>
           </div>
         </div>
+      </SettingsCard>
+
+      {/* User Context */}
+      <SettingsCard title="User Context" className="mb-5 animate-fade-in-up">
+        <p className="text-small text-ax-text-tertiary mb-3">
+          Describe your role in this project — injected into rollups and briefings
+        </p>
+        <textarea
+          value={contextDraft}
+          onChange={e => setContextDraft(e.target.value)}
+          placeholder="e.g. I'm the lead on the frontend, focused on the React components in desktop/src/. I don't touch the CLI scripts."
+          rows={3}
+          className="w-full bg-ax-sunken rounded-lg border border-ax-border-subtle px-3 py-2 text-small text-ax-text-primary placeholder:text-ax-text-tertiary/50 resize-none outline-none focus:border-ax-brand-primary transition-colors font-mono"
+        />
+        {contextDirty && (
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleContextSave}
+              disabled={contextSaving}
+              className="font-mono text-micro px-3 py-1 rounded-full bg-ax-brand-primary text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {contextSaving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        )}
       </SettingsCard>
 
       {/* All Projects */}
