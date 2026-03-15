@@ -13,6 +13,9 @@ PROJECT_PATH="${PROJECT_PATH:-$PWD}"
 WORKSPACE="$AXON_HOME/workspaces/$PROJECT"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROTOCOL="$SCRIPT_DIR/../protocol.md"
+
+# Unset CLAUDECODE to avoid nested session detection
+unset CLAUDECODE 2>/dev/null || true
 TODAY=$(date +%Y-%m-%d)
 ALL_PROJECTS="${ALL_PROJECTS:-}"
 

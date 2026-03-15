@@ -166,6 +166,9 @@ fi
 echo "Step 3: Generating rollup..."
 echo ""
 
+# Unset CLAUDECODE to avoid nested session detection
+unset CLAUDECODE 2>/dev/null || true
+
 CLAUDE_STDERR=$(mktemp)
 ROLLUP_RESULT=$(echo "You are Axon, running in headless mode. Produce the nightly rollup for '$PROJECT'.
 
