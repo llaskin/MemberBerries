@@ -3,7 +3,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useProjectStore } from '@/store/projectStore'
 import { useBackend } from '@/providers/DataProvider'
 import { useDebugStore } from '@/store/debugStore'
-import { Folder, GitBranch, Zap, ArrowRight, ArrowLeft, Check, Search, Globe, HardDrive } from 'lucide-react'
+import { Folder, GitBranch, Zap, ArrowRight, ArrowLeft, Check, Search, Globe, HardDrive, Plus, AlertCircle } from 'lucide-react'
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -215,6 +215,11 @@ function RepoSelector({ onSelect }: { onSelect: (repo: DiscoveredRepo) => void }
   const [search, setSearch] = useState('')
   const [customPath, setCustomPath] = useState('')
   const [showCustom, setShowCustom] = useState(false)
+  const [showScratch, setShowScratch] = useState(false)
+  const [scratchName, setScratchName] = useState('')
+  const [scratchDir, setScratchDir] = useState('~/Github')
+  const [scratchError, setScratchError] = useState('')
+  const [scratchLoading, setScratchLoading] = useState(false)
   const [simulateEmpty, setSimulateEmpty] = useState(false)
   const register = useDebugStore((s) => s.register)
   const unregister = useDebugStore((s) => s.unregister)
@@ -256,6 +261,34 @@ function RepoSelector({ onSelect }: { onSelect: (repo: DiscoveredRepo) => void }
       commitCount: 0,
       lastActivity: '',
     })
+  }
+
+  const handleScratch = async () => {
+    const name = scratchName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-')
+    if (!name) { setScratchError('Project name is required'); return }
+    if (!scratchDir.trim()) { setScratchError('Parent directory is required'); return }
+    setScratchError('')
+    setScratchLoading(true)
+    try {
+      const res = await fetch('/api/axon/scaffold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, parentDir: scratchDir.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setScratchError(data.error || 'Failed to create project'); setScratchLoading(false); return }
+      onSelect({
+        name,
+        path: data.path,
+        remote: '',
+        commitCount: 1,
+        lastActivity: new Date().toISOString().split('T')[0],
+      })
+    } catch (e) {
+      setScratchError(e instanceof Error ? e.message : 'Failed to create project')
+    } finally {
+      setScratchLoading(false)
+    }
   }
 
   return (
@@ -370,8 +403,71 @@ function RepoSelector({ onSelect }: { onSelect: (repo: DiscoveredRepo) => void }
         )}
       </div>
 
-      {/* Custom path */}
-      <div className="border-t border-ax-border-subtle pt-4">
+      {/* Bottom options */}
+      <div className="border-t border-ax-border-subtle pt-4 space-y-3">
+        {/* Start from scratch */}
+        {showScratch ? (
+          <div className="bg-ax-elevated rounded-xl border border-ax-border p-4 space-y-3 animate-fade-in-up">
+            <div className="flex items-center gap-2 mb-1">
+              <Plus size={14} className="text-ax-brand" />
+              <span className="font-mono text-small text-ax-text-primary font-medium">New project from scratch</span>
+            </div>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Project name"
+                value={scratchName}
+                onChange={e => { setScratchName(e.target.value); setScratchError('') }}
+                onKeyDown={e => e.key === 'Enter' && handleScratch()}
+                className="w-full px-3 py-2 rounded-lg bg-ax-sunken border border-ax-border-subtle
+                  font-mono text-small text-ax-text-primary placeholder:text-ax-text-ghost
+                  focus:outline-none focus:border-ax-brand"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Parent directory"
+                  value={scratchDir}
+                  onChange={e => { setScratchDir(e.target.value); setScratchError('') }}
+                  onKeyDown={e => e.key === 'Enter' && handleScratch()}
+                  className="flex-1 px-3 py-2 rounded-lg bg-ax-sunken border border-ax-border-subtle
+                    font-mono text-small text-ax-text-primary placeholder:text-ax-text-ghost
+                    focus:outline-none focus:border-ax-brand"
+                />
+                <button
+                  onClick={handleScratch}
+                  disabled={scratchLoading}
+                  className="px-4 py-2 rounded-lg bg-ax-brand text-white text-small font-medium
+                    hover:bg-ax-brand-hover transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {scratchLoading ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+              {scratchName && (
+                <p className="font-mono text-micro text-ax-text-ghost">
+                  Will create: {scratchDir.trim()}/{scratchName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-')}
+                </p>
+              )}
+              {scratchError && (
+                <p className="text-micro text-ax-error flex items-center gap-1.5">
+                  <AlertCircle size={12} />
+                  {scratchError}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setShowScratch(true); setShowCustom(false) }}
+            className="flex items-center gap-2 text-small text-ax-text-tertiary hover:text-ax-brand transition-colors"
+          >
+            <Plus size={14} />
+            Start a new project from scratch
+          </button>
+        )}
+
+        {/* Custom path */}
         {showCustom ? (
           <div className="flex gap-2">
             <input
@@ -395,10 +491,11 @@ function RepoSelector({ onSelect }: { onSelect: (repo: DiscoveredRepo) => void }
           </div>
         ) : (
           <button
-            onClick={() => setShowCustom(true)}
-            className="text-small text-ax-text-tertiary hover:text-ax-brand transition-colors"
+            onClick={() => { setShowCustom(true); setShowScratch(false) }}
+            className="flex items-center gap-2 text-small text-ax-text-tertiary hover:text-ax-brand transition-colors"
           >
-            Or enter a path manually...
+            <Folder size={14} />
+            Enter a path manually
           </button>
         )}
       </div>

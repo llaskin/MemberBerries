@@ -746,6 +746,52 @@ export function axonDevApi(): Plugin {
             return
           }
 
+          // POST /api/axon/scaffold — create a new git repo from scratch
+          if (req.url === '/api/axon/scaffold' && req.method === 'POST') {
+            let body = ''
+            req.on('data', (c: Buffer) => { body += c.toString() })
+            req.on('end', () => {
+              try {
+                const { name, parentDir: rawDir } = JSON.parse(body) as { name: string; parentDir: string }
+                if (!name || !rawDir) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' })
+                  res.end(JSON.stringify({ error: 'name and parentDir required' }))
+                  return
+                }
+
+                const parentDir = rawDir.startsWith('~') ? rawDir.replace('~', homedir()) : rawDir
+                const projectPath = join(parentDir, name)
+
+                // Check conflicts
+                if (existsSync(projectPath)) {
+                  res.writeHead(409, { 'Content-Type': 'application/json' })
+                  res.end(JSON.stringify({ error: `Directory already exists: ${projectPath}` }))
+                  return
+                }
+
+                const axonWs = join(AXON_HOME, 'workspaces', name)
+                if (existsSync(join(axonWs, 'state.md'))) {
+                  res.writeHead(409, { 'Content-Type': 'application/json' })
+                  res.end(JSON.stringify({ error: `Axon workspace "${name}" already exists` }))
+                  return
+                }
+
+                // Create dir, git init, initial commit
+                mkdirSync(projectPath, { recursive: true })
+                execSync('git init', { cwd: projectPath, stdio: 'pipe' })
+                writeFileSync(join(projectPath, 'README.md'), `# ${name}\n`)
+                execSync('git add -A && git commit -m "Initial commit"', { cwd: projectPath, stdio: 'pipe' })
+
+                res.writeHead(200, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ ok: true, path: projectPath }))
+              } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ error: String(e) }))
+              }
+            })
+            return
+          }
+
           // GET /api/axon/discover-repos
           if (req.url === '/api/axon/discover-repos') {
             const home = homedir()
