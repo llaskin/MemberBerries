@@ -53,6 +53,7 @@ export type TileAction =
   | { type: 'ASSIGN_ZONE'; sessionId: string; zoneId: string | null }
   | { type: 'REORDER'; updates: { sessionId: string; order: number }[] }
   | { type: 'RESIZE'; sessionId: string; width: number; height: number }
+  | { type: 'REPLACE_SESSION'; oldSessionId: string; newSessionId: string }
 
 export type ZoneAction =
   | { type: 'SET_ALL'; zones: ZoneState[] }
@@ -141,6 +142,10 @@ export function tilesReducer(state: TileState[], action: TileAction): TileState[
     case 'RESIZE':
       return state.map(t => t.sessionId === action.sessionId
         ? { ...t, width: action.width, height: action.height }
+        : t)
+    case 'REPLACE_SESSION':
+      return state.map(t => t.sessionId === action.oldSessionId
+        ? { ...t, sessionId: action.newSessionId }
         : t)
     default:
       return state

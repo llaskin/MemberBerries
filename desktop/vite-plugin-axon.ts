@@ -983,8 +983,9 @@ export function axonDevApi(): Plugin {
 
           // --- Session Browser Endpoints ---
 
-          // Re-index sessions if stale (>30s since last run)
-          if (req.url?.startsWith('/api/axon/sessions') && Date.now() - lastSessionIndex > 30_000) {
+          // Re-index sessions if stale (>30s since last run) or forced
+          const forceIndex = req.url?.includes('forceIndex=true')
+          if (req.url?.startsWith('/api/axon/sessions') && (forceIndex || Date.now() - lastSessionIndex > 30_000)) {
             lastSessionIndex = Date.now()
             try {
               const { runFullIndex } = await import('./src/lib/sessionIndexer')

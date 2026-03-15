@@ -114,6 +114,35 @@ export function CanvasView({
   // Optimistic nickname overrides — applied instantly, cleared on next refetch
   const [nicknameOverrides, setNicknameOverrides] = useState<Map<string, string>>(new Map())
 
+  // Detect real session ID after spawning a new session
+  const detectSessionId = useCallback((fakeId: string, spawnTime: number) => {
+    if (!activeProject) return
+    let attempts = 0
+    const maxAttempts = 10
+    const poll = setInterval(async () => {
+      attempts++
+      if (attempts > maxAttempts) { clearInterval(poll); return }
+      try {
+        const res = await fetch(
+          `/api/axon/sessions?project=${encodeURIComponent(activeProject)}&forceIndex=true`
+        )
+        const data = await res.json()
+        const existingTileIds = new Set(tiles.map(t => t.sessionId))
+        // Find a session created after spawn that isn't already on a tile
+        const match = (data.sessions || []).find((s: { id: string; created_at: string | null }) =>
+          !existingTileIds.has(s.id) &&
+          s.created_at && new Date(s.created_at).getTime() > spawnTime - 5000
+        )
+        if (match) {
+          clearInterval(poll)
+          dispatchTiles({ type: 'REPLACE_SESSION', oldSessionId: fakeId, newSessionId: match.id })
+          useTerminalStore.getState().replaceCanvasSessionId(fakeId, match.id)
+          immediateSave()
+        }
+      } catch { /* silent */ }
+    }, 3000)
+  }, [activeProject, tiles, dispatchTiles, immediateSave])
+
   const sessionMap = useMemo(() => {
     const map = new Map(sessions.map(s => [s.id, s]))
     // Apply optimistic overrides
@@ -513,9 +542,11 @@ export function CanvasView({
             store.setTileExpanded(sid, true)
           } else if (activeProject) {
             // Normal — spawn terminal and expand
+            const isNew = sid.startsWith('new-')
             dispatchTiles({ type: 'RESIZE', sessionId: sid, width: TILE_EXPANDED_W, height: TILE_EXPANDED_H })
-            store.spawn(activeProject, sid.startsWith('new-') ? undefined : sid).then(tid => {
+            store.spawn(activeProject, isNew ? undefined : sid).then(tid => {
               useTerminalStore.getState().expandCanvasTile(sid, tid)
+              if (isNew) detectSessionId(sid, Date.now())
             })
           } else if (onOpenSession) {
             onOpenSession(sid)
@@ -938,12 +969,14 @@ export function CanvasView({
               const v = viewportRef.current
               const wx = snap((width / 2 - v.x) / v.scale - TILE_EXPANDED_W / 2)
               const wy = snap((height / 2 - v.y) / v.scale - TILE_EXPANDED_H / 2)
-              const newId = `new-${Date.now()}`
+              const spawnTime = Date.now()
+              const newId = `new-${spawnTime}`
               dispatchTiles({ type: 'ADD', sessionId: newId, x: wx, y: wy })
               dispatchTiles({ type: 'RESIZE', sessionId: newId, width: TILE_EXPANDED_W, height: TILE_EXPANDED_H })
               useTerminalStore.getState().spawn(activeProject).then(tid => {
                 useTerminalStore.getState().expandCanvasTile(newId, tid)
                 immediateSave()
+                detectSessionId(newId, spawnTime)
               })
             }}
             className="text-ax-text-ghost hover:text-ax-text-secondary bg-ax-elevated/80

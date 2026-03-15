@@ -60,6 +60,7 @@ interface TerminalStore {
   minimizeCanvasTile: (sessionId: string) => void
   killCanvasTerminal: (sessionId: string) => void
   setTileExpanded: (sessionId: string, expanded: boolean) => void
+  replaceCanvasSessionId: (oldId: string, newId: string) => void
 }
 
 export const useTerminalStore = create<TerminalStore>((set, get) => ({
@@ -229,5 +230,17 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     }
     const { [sessionId]: _, ...rest } = s.canvasExpanded
     return { canvasExpanded: rest }
+  }),
+
+  replaceCanvasSessionId: (oldId, newId) => set(s => {
+    const termId = s.canvasTerminals[oldId]
+    const expandState = s.canvasExpanded[oldId]
+    if (!termId) return s
+    const { [oldId]: _t, ...restCanvas } = s.canvasTerminals
+    const { [oldId]: _e, ...restExpanded } = s.canvasExpanded
+    return {
+      canvasTerminals: { ...restCanvas, [newId]: termId },
+      canvasExpanded: expandState ? { ...restExpanded, [newId]: expandState } : restExpanded,
+    }
   }),
 }))
