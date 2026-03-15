@@ -12,9 +12,7 @@ export function AgentView() {
   const resumeSessionId = useUIStore((s) => s.resumeSessionId)
   const clearResumeSession = useUIStore((s) => s.clearResumeSession)
 
-  const [mode, setMode] = useState<AgentMode>(() =>
-    resumeSessionId ? 'terminal' : 'headless'
-  )
+  const [mode, setMode] = useState<AgentMode>('terminal')
   const [sessionActive, setSessionActive] = useState(false)
 
   // Track the file reference handler from the active mode

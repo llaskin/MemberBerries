@@ -921,6 +921,201 @@ export function axonDevApi(): Plugin {
             }
           }
 
+          // --- Git Endpoints ---
+
+          // GET /api/axon/projects/:name/git/info
+          const gitInfoMatch = req.url?.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/info$/)
+          if (gitInfoMatch) {
+            const project = decodeURIComponent(gitInfoMatch[1])
+            let cwd = process.cwd()
+            try {
+              const cfg = await readFile(join(AXON_HOME, 'workspaces', project, 'config.yaml'), 'utf-8')
+              const pp = cfg.match(/^project_path:\s*(.+)$/m)?.[1]?.trim()
+              if (pp && existsSync(pp)) cwd = pp
+            } catch { /* fallback */ }
+
+            try {
+              execSync('git rev-parse --git-dir', { cwd, stdio: 'pipe' })
+            } catch {
+              res.end(JSON.stringify({ error: 'not-a-git-repo' }))
+              return
+            }
+
+            try {
+              const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd, encoding: 'utf-8' }).trim()
+              const shortSha = execSync('git rev-parse --short HEAD', { cwd, encoding: 'utf-8' }).trim()
+              const isDetached = branch === 'HEAD'
+
+              let remote = ''
+              try { remote = execSync('git remote get-url origin', { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim() } catch { /* no remote */ }
+
+              let hasUpstream = false
+              let ahead = 0
+              let behind = 0
+              try {
+                execSync('git rev-parse --verify @{u}', { cwd, stdio: 'pipe' })
+                hasUpstream = true
+                const counts = execSync('git rev-list --left-right --count HEAD...@{u}', { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim()
+                const [a, b] = counts.split(/\s+/)
+                ahead = parseInt(a) || 0
+                behind = parseInt(b) || 0
+              } catch { /* no upstream */ }
+
+              res.end(JSON.stringify({ branch, shortSha, isDetached, remote, hasUpstream, ahead, behind }))
+            } catch (err) {
+              res.end(JSON.stringify({ error: String(err) }))
+            }
+            return
+          }
+
+          // GET /api/axon/projects/:name/git/log?limit=50
+          const gitLogMatch = req.url?.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/log(\?.*)?$/)
+          if (gitLogMatch && req.method === 'GET') {
+            const project = decodeURIComponent(gitLogMatch[1])
+            const params = new URLSearchParams(gitLogMatch[2]?.slice(1) || '')
+            const limit = Math.min(parseInt(params.get('limit') || '50') || 50, 200)
+
+            let cwd = process.cwd()
+            try {
+              const cfg = await readFile(join(AXON_HOME, 'workspaces', project, 'config.yaml'), 'utf-8')
+              const pp = cfg.match(/^project_path:\s*(.+)$/m)?.[1]?.trim()
+              if (pp && existsSync(pp)) cwd = pp
+            } catch { /* fallback */ }
+
+            try {
+              const raw = execSync(
+                `git log --format="%H|%h|%s|%an|%aI" -${limit}`,
+                { cwd, encoding: 'utf-8', stdio: 'pipe' }
+              ).trim()
+              const commits = raw ? raw.split('\n').map(line => {
+                const [hash, short, ...rest] = line.split('|')
+                const date = rest.pop() || ''
+                const author = rest.pop() || ''
+                const message = rest.join('|')
+                return { hash, short, message, author, date }
+              }) : []
+              res.end(JSON.stringify({ commits }))
+            } catch {
+              res.end(JSON.stringify({ commits: [] }))
+            }
+            return
+          }
+
+          // GET /api/axon/projects/:name/git/branches
+          const gitBranchesMatch = req.url?.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/branches$/)
+          if (gitBranchesMatch) {
+            const project = decodeURIComponent(gitBranchesMatch[1])
+            let cwd = process.cwd()
+            try {
+              const cfg = await readFile(join(AXON_HOME, 'workspaces', project, 'config.yaml'), 'utf-8')
+              const pp = cfg.match(/^project_path:\s*(.+)$/m)?.[1]?.trim()
+              if (pp && existsSync(pp)) cwd = pp
+            } catch { /* fallback */ }
+
+            try {
+              const raw = execSync(
+                'git branch --format="%(refname:short)|%(HEAD)|%(upstream:short)|%(objectname:short)"',
+                { cwd, encoding: 'utf-8', stdio: 'pipe' }
+              ).trim()
+              const branches = raw ? raw.split('\n').map(line => {
+                const [name, head, upstream, shortSha] = line.split('|')
+                return { name, isCurrent: head === '*', upstream: upstream || '', shortSha }
+              }) : []
+              res.end(JSON.stringify({ branches }))
+            } catch {
+              res.end(JSON.stringify({ branches: [] }))
+            }
+            return
+          }
+
+          // POST /api/axon/projects/:name/git/push
+          const gitPushMatch = req.url?.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/push$/)
+          if (gitPushMatch && req.method === 'POST') {
+            const project = decodeURIComponent(gitPushMatch[1])
+            let cwd = process.cwd()
+            try {
+              const cfg = await readFile(join(AXON_HOME, 'workspaces', project, 'config.yaml'), 'utf-8')
+              const pp = cfg.match(/^project_path:\s*(.+)$/m)?.[1]?.trim()
+              if (pp && existsSync(pp)) cwd = pp
+            } catch { /* fallback */ }
+
+            try {
+              // Check if upstream is set
+              let hasUpstream = false
+              try { execSync('git rev-parse --verify @{u}', { cwd, stdio: 'pipe' }); hasUpstream = true } catch { /* no upstream */ }
+
+              let cmd = 'git push 2>&1'
+              if (!hasUpstream) {
+                const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim()
+                cmd = `git push -u origin ${branch} 2>&1`
+              }
+              const output = execSync(cmd, { cwd, encoding: 'utf-8', timeout: 30000 })
+              res.end(JSON.stringify({ ok: true, message: output.trim() || 'Pushed successfully' }))
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? (err as { stderr?: string }).stderr || err.message : String(err)
+              res.end(JSON.stringify({ ok: false, message: msg }))
+            }
+            return
+          }
+
+          // POST /api/axon/projects/:name/git/pull
+          const gitPullMatch = req.url?.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/pull$/)
+          if (gitPullMatch && req.method === 'POST') {
+            const project = decodeURIComponent(gitPullMatch[1])
+            let cwd = process.cwd()
+            try {
+              const cfg = await readFile(join(AXON_HOME, 'workspaces', project, 'config.yaml'), 'utf-8')
+              const pp = cfg.match(/^project_path:\s*(.+)$/m)?.[1]?.trim()
+              if (pp && existsSync(pp)) cwd = pp
+            } catch { /* fallback */ }
+
+            try {
+              const output = execSync('git pull 2>&1', { cwd, encoding: 'utf-8', timeout: 30000 })
+              res.end(JSON.stringify({ ok: true, message: output.trim() || 'Pulled successfully' }))
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? (err as { stderr?: string }).stderr || err.message : String(err)
+              res.end(JSON.stringify({ ok: false, message: msg }))
+            }
+            return
+          }
+
+          // POST /api/axon/projects/:name/git/checkout
+          const gitCheckoutMatch = req.url?.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/checkout$/)
+          if (gitCheckoutMatch && req.method === 'POST') {
+            const project = decodeURIComponent(gitCheckoutMatch[1])
+            const body = await new Promise<string>((resolve) => {
+              let data = ''
+              req.on('data', (chunk: Buffer) => { data += chunk.toString() })
+              req.on('end', () => resolve(data))
+            })
+            const { branch } = JSON.parse(body) as { branch: string }
+
+            let cwd = process.cwd()
+            try {
+              const cfg = await readFile(join(AXON_HOME, 'workspaces', project, 'config.yaml'), 'utf-8')
+              const pp = cfg.match(/^project_path:\s*(.+)$/m)?.[1]?.trim()
+              if (pp && existsSync(pp)) cwd = pp
+            } catch { /* fallback */ }
+
+            // Safety: check for uncommitted changes
+            try {
+              const status = execSync('git status --porcelain', { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim()
+              if (status) {
+                res.end(JSON.stringify({ ok: false, message: 'Uncommitted changes. Commit or stash first.' }))
+                return
+              }
+            } catch { /* proceed */ }
+
+            try {
+              const output = execSync(`git checkout ${branch} 2>&1`, { cwd, encoding: 'utf-8', timeout: 10000 })
+              res.end(JSON.stringify({ ok: true, message: output.trim() || `Switched to ${branch}` }))
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? (err as { stderr?: string }).stderr || err.message : String(err)
+              res.end(JSON.stringify({ ok: false, message: msg }))
+            }
+            return
+          }
+
           // --- Terminal Endpoints ---
 
           // POST /api/axon/terminal/spawn

@@ -3,7 +3,7 @@ import { useUIStore, type ViewId } from '@/store/uiStore'
 import { useProjectStore } from '@/store/projectStore'
 
 const CAROUSEL: ViewId[] = ['morning', 'agents', 'timeline']
-const NAV_VIEWS: ViewId[] = ['morning', 'agents', 'timeline', 'todos', 'terminal', 'settings']
+const NAV_VIEWS: ViewId[] = ['morning', 'agents', 'timeline', 'source', 'todos', 'terminal', 'settings']
 
 /**
  * Global keyboard shortcuts:
@@ -53,6 +53,13 @@ export function useKeyboardShortcuts(onTogglePalette: () => void) {
         return
       }
 
+      // Cmd+Shift+G: jump to Source Control
+      if (meta && e.shiftKey && (e.key === 'g' || e.key === 'G')) {
+        e.preventDefault()
+        setView('source')
+        return
+      }
+
       // Cmd+Shift+T: jump to Tasks
       if (meta && e.shiftKey && (e.key === 't' || e.key === 'T')) {
         e.preventDefault()
@@ -67,10 +74,10 @@ export function useKeyboardShortcuts(onTogglePalette: () => void) {
         return
       }
 
-      // Cmd+1-6: switch views
-      if (meta && e.key >= '1' && e.key <= '6') {
+      // Cmd+1-7: switch views
+      if (meta && e.key >= '1' && e.key <= '7') {
         e.preventDefault()
-        const views: ViewId[] = ['morning', 'agents', 'timeline', 'todos', 'terminal', 'settings']
+        const views: ViewId[] = ['morning', 'agents', 'timeline', 'source', 'todos', 'terminal', 'settings']
         const idx = parseInt(e.key) - 1
         if (views[idx]) setView(views[idx])
         return

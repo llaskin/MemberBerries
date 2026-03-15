@@ -12,6 +12,7 @@ import { OnboardingView } from '@/views/OnboardingView'
 import { AgentView } from '@/views/AgentView'
 import { SessionsView } from '@/views/SessionsView'
 import { TodosView } from '@/views/TodosView'
+import { SourceControlView } from '@/views/SourceControlView'
 import { useUIStore, type ViewId } from '@/store/uiStore'
 import { useProjectStore } from '@/store/projectStore'
 
@@ -21,7 +22,7 @@ import { useProjectStore } from '@/store/projectStore'
 // Navigating between any of them slides the strip — same
 // animation everywhere. Sub-views overlay on top.
 
-const STRIP: ViewId[] = ['morning', 'agents', 'timeline', 'todos', 'terminal', 'settings']
+const STRIP: ViewId[] = ['morning', 'agents', 'timeline', 'source', 'todos', 'terminal', 'settings']
 const FULL_BLEED = new Set<ViewId>(['agents', 'terminal'])
 const EDITORIAL = new Set<ViewId>(['morning', 'agents', 'timeline'])
 
@@ -149,6 +150,7 @@ function ViewRouter() {
             {viewId === 'morning' && <MorningView />}
             {viewId === 'agents' && <SessionsView />}
             {viewId === 'timeline' && <TimelineView />}
+            {viewId === 'source' && <SourceControlView />}
             {viewId === 'todos' && <TodosView />}
             {viewId === 'terminal' && <AgentView />}
             {viewId === 'settings' && <SettingsView />}

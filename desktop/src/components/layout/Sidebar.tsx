@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useProjects } from '@/hooks/useProjects'
 import { useUIStore, type ViewId } from '@/store/uiStore'
-import { Clock, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, Brain, PanelLeftClose, PanelLeftOpen, Keyboard, CheckSquare, ChevronRight, Archive } from 'lucide-react'
+import { Clock, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, Brain, PanelLeftClose, PanelLeftOpen, Keyboard, CheckSquare, ChevronRight, Archive, GitBranch } from 'lucide-react'
 
 const mainNav: { id: ViewId; label: string; icon: typeof Clock }[] = [
   { id: 'morning', label: 'Morning', icon: Coffee },
   { id: 'agents', label: 'Agents', icon: Brain },
   { id: 'timeline', label: 'Timeline', icon: Clock },
+  { id: 'source', label: 'Source', icon: GitBranch },
   { id: 'todos', label: 'Tasks', icon: CheckSquare },
 ]
 
@@ -16,7 +17,8 @@ const utilNav: { id: ViewId; label: string; icon: typeof Clock }[] = [
 ]
 
 const SHORTCUTS: { keys: string[]; label: string }[] = [
-  { keys: ['Cmd', '1–6'], label: 'Switch view' },
+  { keys: ['Cmd', '1–7'], label: 'Switch view' },
+  { keys: ['Cmd', 'Shift', 'G'], label: 'Source control' },
   { keys: ['Cmd', 'Shift', 'T'], label: 'Tasks' },
   { keys: ['Cmd', '←', '→'], label: 'Slide views' },
   { keys: ['Cmd', '↑', '↓'], label: 'Switch project' },
