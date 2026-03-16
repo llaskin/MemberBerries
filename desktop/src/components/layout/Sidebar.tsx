@@ -274,7 +274,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
                 style={{ cursor: isDragging ? 'grabbing' : undefined }}
               >
                 <GripVertical size={10} className="shrink-0 opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                <span className={`w-2 h-2 rounded-full shrink-0 ${
                   p.status === 'active' ? 'bg-ax-accent' :
                   p.status === 'paused' ? 'bg-ax-warning' : 'bg-ax-text-tertiary'
                 } ${isToday ? 'animate-pulse-dot' : ''}`} aria-hidden="true" />
@@ -344,11 +344,6 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
 
       {/* Navigation */}
       <nav className={`${collapsed ? 'px-1' : 'px-3'} pt-4 pb-2`} aria-label="Main views">
-        {!collapsed && (
-          <div className="text-micro font-mono uppercase tracking-widest text-[var(--ax-text-on-dark-muted)] px-2 mb-1" aria-hidden="true">
-            Views
-          </div>
-        )}
         {mainNav.map((item) => {
           const isActive = activeView === item.id || (item.id === 'timeline' && ['rollup-detail', 'state', 'decisions'].includes(activeView))
           const disabled = isUninitialized
@@ -360,6 +355,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
                 setView(item.id)
                 if (!collapsed) showHint(['⌘', '←', '→'], 'to slide views', e.currentTarget)
               }}
+              title={collapsed ? item.label : undefined}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               aria-disabled={disabled}
@@ -396,6 +392,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
                 setView(item.id)
                 if (!collapsed) showHint(['⌘', String(keyNum)], `for ${item.label}`, e.currentTarget)
               }}
+              title={collapsed ? item.label : undefined}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               className={`w-full text-left rounded-lg mb-0.5 flex items-center transition-all duration-150
