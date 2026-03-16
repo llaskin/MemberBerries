@@ -19,7 +19,7 @@ jobs:
       - name: Build server
         run: cd desktop && npm run build:server
       - name: Build Electron app
-        run: cd desktop && npx electron-builder --mac
+        run: cd desktop && npx electron-builder --mac --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.MAC_CERT_P12 }}

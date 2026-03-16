@@ -1,7 +1,14 @@
 {
   "name": "axon-desktop",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.2",
+  "description": "Axon developer memory system — desktop app",
+  "author": "Axon Embodied",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AxonEmbodied/axon.git",
+    "directory": "desktop"
+  },
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
