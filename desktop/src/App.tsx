@@ -168,7 +168,7 @@ function ViewRouter() {
           : swipeDir === 'left' ? 'animate-slide-left'
           : 'animate-fade-in'
         }`}>
-          <div className="max-w-3xl mx-auto px-8 py-10 overflow-y-auto h-full">
+          <div className={`${activeView === 'onboarding' ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-8 py-10 overflow-y-auto h-full`}>
             {activeView === 'rollup-detail' && <RollupDetailView />}
             {activeView === 'state' && <StateView />}
             {activeView === 'decisions' && <DecisionsView />}

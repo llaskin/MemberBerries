@@ -175,60 +175,84 @@ const STEPS: { id: OnboardingStep; label: string; num: number }[] = [
 function StepIndicator({ current }: { current: OnboardingStep }) {
   const currentIdx = STEPS.findIndex(s => s.id === current)
 
-  return (
-    <div className="flex items-center justify-between mb-10">
-      {STEPS.map((s, i) => {
-        const isComplete = i < currentIdx
-        const isCurrent = i === currentIdx
+  // Sliding window: show current step centered with neighbors
+  // Each step+connector is ~150px wide, we shift the strip so current is centered
+  const STEP_WIDTH = 150
+  const shiftPx = currentIdx * STEP_WIDTH
 
-        return (
-          <div key={s.id} className="flex items-center flex-1 last:flex-none">
-            {/* Step node */}
-            <div className="flex items-center gap-2 shrink-0">
-              <div className={`
-                relative w-6 h-6 rounded-full flex items-center justify-center
-                transition-all duration-400 ease-out
-                ${isComplete
-                  ? 'bg-ax-accent text-white scale-90'
-                  : isCurrent
-                    ? 'bg-ax-brand text-white scale-110 shadow-[0_0_0_4px_rgba(200,149,108,0.15)]'
-                    : 'bg-ax-sunken text-ax-text-ghost'
-                }
-              `}>
-                {isComplete ? (
-                  <Check size={10} strokeWidth={2.5} />
-                ) : (
-                  <span className="font-mono text-[10px] font-medium">{s.num}</span>
-                )}
-                {isCurrent && (
-                  <div className="absolute inset-0 rounded-full animate-ping-slow bg-ax-brand/20" />
-                )}
+  return (
+    <div className="relative mb-10 overflow-hidden">
+      {/* Fade edges */}
+      <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-ax-base to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-ax-base to-transparent z-10 pointer-events-none" />
+
+      {/* Sliding strip */}
+      <div
+        className="flex items-center transition-transform duration-500 ease-out px-12"
+        style={{ transform: `translateX(calc(50% - ${shiftPx + STEP_WIDTH / 2}px))` }}
+      >
+        {STEPS.map((s, i) => {
+          const isComplete = i < currentIdx
+          const isCurrent = i === currentIdx
+          const distance = Math.abs(i - currentIdx)
+
+          return (
+            <div
+              key={s.id}
+              className="flex items-center shrink-0"
+              style={{
+                width: i < STEPS.length - 1 ? STEP_WIDTH : undefined,
+                opacity: distance <= 1 ? 1 : distance <= 2 ? 0.4 : 0.15,
+                transition: 'opacity 400ms ease-out',
+              }}
+            >
+              {/* Step node */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className={`
+                  relative w-6 h-6 rounded-full flex items-center justify-center
+                  transition-all duration-400 ease-out
+                  ${isComplete
+                    ? 'bg-ax-accent text-white scale-90'
+                    : isCurrent
+                      ? 'bg-ax-brand text-white scale-110 shadow-[0_0_0_4px_rgba(200,149,108,0.15)]'
+                      : 'bg-ax-sunken text-ax-text-ghost'
+                  }
+                `}>
+                  {isComplete ? (
+                    <Check size={10} strokeWidth={2.5} />
+                  ) : (
+                    <span className="font-mono text-[10px] font-medium">{s.num}</span>
+                  )}
+                  {isCurrent && (
+                    <div className="absolute inset-0 rounded-full animate-ping-slow bg-ax-brand/20" />
+                  )}
+                </div>
+                <span className={`
+                  font-mono text-micro transition-all duration-300 whitespace-nowrap
+                  ${isComplete
+                    ? 'text-ax-accent font-medium'
+                    : isCurrent
+                      ? 'text-ax-text-primary font-medium'
+                      : 'text-ax-text-ghost'
+                  }
+                `}>
+                  {s.label}
+                </span>
               </div>
-              <span className={`
-                font-mono text-micro transition-all duration-300
-                ${isComplete
-                  ? 'text-ax-accent font-medium'
-                  : isCurrent
-                    ? 'text-ax-text-primary font-medium'
-                    : 'text-ax-text-ghost'
-                }
-              `}>
-                {s.label}
-              </span>
+              {/* Connector line */}
+              {i < STEPS.length - 1 && (
+                <div className="flex-1 mx-3 h-[2px] rounded-full overflow-hidden bg-ax-sunken min-w-4">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                      i < currentIdx ? 'w-full bg-ax-accent' : 'w-0 bg-ax-brand'
+                    }`}
+                  />
+                </div>
+              )}
             </div>
-            {/* Connector line */}
-            {i < STEPS.length - 1 && (
-              <div className="flex-1 mx-3 h-[2px] rounded-full overflow-hidden bg-ax-sunken min-w-4">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ease-out ${
-                    i < currentIdx ? 'w-full bg-ax-accent' : 'w-0 bg-ax-brand'
-                  }`}
-                />
-              </div>
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -568,7 +592,7 @@ function AxonContextSetup({ repo, onContinue, onBack }: {
   return (
     <div className="space-y-5">
       {/* Philosophy intro */}
-      <p className="text-body text-ax-text-secondary leading-relaxed max-w-2xl">
+      <p className="text-body text-ax-text-secondary leading-relaxed max-w-3xl">
         Axon tracks your <strong className="text-ax-text-primary">code</strong> and your <strong className="text-ax-text-primary">tacit knowledge</strong> about that code. They live in different places — and the AI reads both.
       </p>
 
@@ -709,7 +733,7 @@ function ConfigureStep({ config, onChange, onContinue, onBack }: {
 
   return (
     <div className="space-y-6">
-      <p className="text-body text-ax-text-secondary leading-relaxed max-w-2xl">
+      <p className="text-body text-ax-text-secondary leading-relaxed max-w-3xl">
         These settings control what Axon collects and how rollups are generated. Defaults work well for most projects — you can always change them later in Settings.
       </p>
 
@@ -823,7 +847,7 @@ function UserContextStep({ onContinue, onBack }: {
 
   return (
     <div className="space-y-6">
-      <p className="text-body text-ax-text-secondary leading-relaxed max-w-2xl">
+      <p className="text-body text-ax-text-secondary leading-relaxed max-w-3xl">
         Help Axon understand <strong className="text-ax-text-primary">who you are</strong> in relation to this project. This shapes how rollups, briefings, and recommendations are tailored to you.
       </p>
 
