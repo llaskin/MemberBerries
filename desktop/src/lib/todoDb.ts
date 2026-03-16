@@ -277,7 +277,7 @@ export function todoDendriteSummary(project: string): {
   items: TodoItem[]
 } {
   const items = listTodos(project)
-  const d = today()
+  today() // ensure date fn works
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
 
   const active = items.filter(i => i.status === 'active')

@@ -124,8 +124,10 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
       role="complementary"
       aria-label="Sidebar navigation"
     >
+      {/* Drag region for Electron title bar */}
+      <div className="h-8 shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
       {/* Logo + collapse toggle */}
-      <div className={`flex items-center ${collapsed ? 'justify-center py-3' : 'px-5 py-4'}`}>
+      <div className={`flex items-center ${collapsed ? 'justify-center py-3' : 'px-5 py-0'}`}>
         {collapsed ? (
           <button
             onClick={toggleSidebar}
@@ -176,7 +178,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
             <span className="text-micro">New Project</span>
           </button>
           <div ref={listRef}>
-          {(dragIdx !== null && dragThreshold.current ? getDragOrder() : activeProjects).map((p, i) => {
+          {(dragIdx !== null && dragThreshold.current ? getDragOrder() : activeProjects).map((p, _i) => {
             const isToday = p.lastRollup === today
             const isDragging = dragIdx !== null && dragThreshold.current
             const isDraggedItem = isDragging && overIdx !== null &&

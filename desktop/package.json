@@ -3,19 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:server": "node scripts/build-server.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "electron:dev": "npm run build && npm run build:server && electron .",
+    "electron:build": "npm run build && npm run build:server && electron-builder",
+    "electron:build:mac": "npm run build && npm run build:server && electron-builder --mac"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.166.6",
+    "electron-squirrel-startup": "^1.0.1",
+    "express": "^5.1.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@xterm/addon-fit": "^0.11.0",
@@ -55,6 +59,8 @@
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
+    "electron": "^35.2.1",
+    "electron-builder": "^26.0.12",
     "vite": "^7.3.1",
     "vitest": "^3.2.4"
   }

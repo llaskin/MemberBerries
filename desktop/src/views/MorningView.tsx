@@ -49,7 +49,7 @@ export function MorningView() {
   const allTerminals = useTerminalStore(s => s.terminals)
   const activeTerminals = Object.entries(allTerminals)
     .filter(([, e]) => e.status === 'connected' || e.status === 'connecting' || e.status === 'spawning')
-    .map(([id, e]) => ({ terminalId: id, ...e }))
+    .map(([id, e]) => ({ ...e, terminalId: id }))
 
   // Auto-select first terminal when panel opens and none is selected
   useEffect(() => {

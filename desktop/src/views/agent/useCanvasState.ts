@@ -2,7 +2,7 @@ import { useReducer, useCallback, useEffect, useRef, useState, useMemo } from 'r
 import {
   tilesReducer, zonesReducer,
   computeZoneLayouts, computeTilePositionMap, computeCompactLayout,
-  ZONE_COLORS, snap, TILE_W, TILE_H, TILE_EXPANDED_W, TILE_EXPANDED_H, TILE_MINIMIZED_W, TILE_MINIMIZED_H, ZONE_MIN_W, ZONE_MIN_H,
+  ZONE_COLORS, snap, TILE_W, TILE_H, TILE_EXPANDED_W, TILE_EXPANDED_H, ZONE_MIN_W, ZONE_MIN_H,
   type TileState, type ZoneState,
 } from './zoneReducers'
 import { useTerminalStore } from '@/store/terminalStore'

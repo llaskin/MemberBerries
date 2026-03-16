@@ -4,7 +4,7 @@
 import { basename } from 'path'
 import {
   addTodo, listTodos, transitionTodo, reprioritiseTodo,
-  addNote, editTodo, todoDendriteSummary,
+  addNote, todoDendriteSummary,
 } from './todoDb'
 import type { TodoPriority, TodoItem } from './todoDb'
 

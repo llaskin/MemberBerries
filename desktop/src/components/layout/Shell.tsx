@@ -40,6 +40,8 @@ export function Shell({ children }: { children: ReactNode }) {
       <a href="#main-content" className="skip-to-content">Skip to content</a>
       <Sidebar onOpenPalette={togglePalette} />
       <main className="flex-1 bg-ax-base relative h-full overflow-hidden" role="main" aria-label="Main content" id="main-content">
+        {/* Drag region for Electron title bar — spans main content top */}
+        <div className="absolute top-0 left-0 right-0 h-8 z-50" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
         <NeuralBackground />
         <DebugMenu />
         <div className={`relative h-full ${animClass}`} key={activeProject || 'none'}>

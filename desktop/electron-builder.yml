@@ -1,0 +1,31 @@
+appId: com.axon.desktop
+productName: Axon
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - electron/**/*
+  - "!node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE,license}"
+  - "!node_modules/**/*.{ts,map}"
+asar: true
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [universal]
+  hardenedRuntime: true
+  entitlements: electron/entitlements.mac.plist
+  entitlementsInherit: electron/entitlements.mac.plist
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+win:
+  target: nsis
+linux:
+  target: AppImage

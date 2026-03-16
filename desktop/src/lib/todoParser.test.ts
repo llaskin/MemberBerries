@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseTodos, serializeTodos } from './todoParser'
-import type { TodoItem, TodoState } from './todoParser'
+import type { TodoState } from './todoParser'
 
 const SAMPLE_TODOS = `---
 type: todos

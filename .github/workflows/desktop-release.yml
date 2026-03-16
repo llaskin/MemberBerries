@@ -1,0 +1,30 @@
+name: Build Desktop
+
+on:
+  push:
+    tags: ['desktop-v*']
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: cd desktop && npm ci
+      - name: Build frontend
+        run: cd desktop && npm run build
+      - name: Build server
+        run: cd desktop && npm run build:server
+      - name: Build Electron app
+        run: cd desktop && npx electron-builder --mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/release/*.dmg

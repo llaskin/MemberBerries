@@ -59,7 +59,7 @@ export function normalizeRollupFrontmatter(raw: Record<string, unknown>): Rollup
     }
   }
 
-  return out as RollupFrontmatter
+  return out as unknown as RollupFrontmatter
 }
 
 export function parseFrontmatter<T = Record<string, unknown>>(content: string): ParseResult<{ frontmatter: T; body: string }> {

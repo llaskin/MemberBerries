@@ -430,7 +430,7 @@ function CronJobsPanel({ project }: { project: string }) {
   const hasJobs = summary && summary.total > 0
   const isRunning = summary && summary.running > 0
   const lastSuccess = jobs.find(j => j.status === 'success')
-  const lastFailure = jobs.find(j => j.status === 'failed')
+  // const lastFailure = jobs.find(j => j.status === 'failed')
 
   // Check if running job seems stale (>15 min)
   const runningJob = jobs.find(j => j.status === 'running')
@@ -571,7 +571,7 @@ function CronJobsPanel({ project }: { project: string }) {
                     : job.episode || job.error || job.type}
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {job.meta?.session_id && (
+                  {(job.meta?.session_id as string) && (
                     <button
                       onClick={() => setWatchingJobId(watchingJobId === job.id ? null : job.id)}
                       className={`p-0.5 rounded transition-colors ${

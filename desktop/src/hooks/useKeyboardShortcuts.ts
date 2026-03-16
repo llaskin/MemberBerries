@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useUIStore, type ViewId } from '@/store/uiStore'
 import { useProjectStore } from '@/store/projectStore'
 
-const CAROUSEL: ViewId[] = ['morning', 'agents', 'timeline']
 const NAV_VIEWS: ViewId[] = ['morning', 'agents', 'timeline', 'source', 'todos', 'terminal', 'settings']
 
 /**

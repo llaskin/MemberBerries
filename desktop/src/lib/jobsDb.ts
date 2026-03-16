@@ -3,7 +3,7 @@
 import Database from 'better-sqlite3'
 import { join } from 'path'
 import { homedir } from 'os'
-import { mkdirSync, existsSync } from 'fs'
+import { mkdirSync } from 'fs'
 
 // ─── Types ───────────────────────────────────────────────────────
 

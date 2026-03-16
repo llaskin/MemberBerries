@@ -303,7 +303,7 @@ function SearchInput({ name, input }: { name: string; input: Record<string, unkn
     <div className="px-2.5 py-1 flex items-center gap-1.5 font-mono text-[10px] flex-wrap">
       <span className="text-ax-text-ghost">{name.toLowerCase()}</span>
       <code className="text-ax-brand">{input.pattern as string}</code>
-      {input.path && <span className="text-ax-text-ghost">in {shortPath(input.path as string)}</span>}
+      {input.path ? <span className="text-ax-text-ghost">in {shortPath(input.path as string)}</span> : null}
     </div>
   )
 }
@@ -336,11 +336,11 @@ function WebFetchInput({ input }: { input: Record<string, unknown> }) {
           {input.url as string}
         </a>
       </div>
-      {input.prompt && (
+      {input.prompt ? (
         <div className="text-[10px] text-ax-text-tertiary pl-4 italic truncate">
           {input.prompt as string}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

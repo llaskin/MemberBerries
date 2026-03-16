@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import { CheckSquare, Plus, Zap, ChevronDown, X, Archive, Trash2, ArrowUp, ArrowDown, RotateCcw, Pencil } from 'lucide-react'
-import type { TodoItem, TodoPriority, TodoStatus } from '@/lib/todoDb'
+import type { TodoItem, TodoPriority } from '@/lib/todoDb'
 
 // ─── Types ───────────────────────────────────────────────────────
 

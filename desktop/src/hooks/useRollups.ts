@@ -26,7 +26,7 @@ export function useRollups(project: string | null) {
           if (result.ok && result.data) {
             const normalized = normalizeRollupFrontmatter({
               type: 'rollup', date: '', project,
-              ...result.data.frontmatter as Record<string, unknown>,
+              ...result.data.frontmatter as unknown as Record<string, unknown>,
             })
             return {
               filename: r.filename,

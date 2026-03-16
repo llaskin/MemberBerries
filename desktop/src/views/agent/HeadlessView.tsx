@@ -70,7 +70,7 @@ export function HeadlessView({ onFileReferenceHandler, onSessionActive }: Headle
     function handleGlobalKeyDown(e: KeyboardEvent) {
       if (e.key === 'Tab' && e.shiftKey) {
         e.preventDefault()
-        if (status !== 'running' && status !== 'awaiting_permission') {
+        if (status !== 'running' && (status as string) !== 'awaiting_permission') {
           cyclePermissionMode()
         }
       }
@@ -203,7 +203,7 @@ export function HeadlessView({ onFileReferenceHandler, onSessionActive }: Headle
           </span>
         )}
         <div className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[status]}`} />
-        {(status === 'running' || status === 'awaiting_permission') && (
+        {(status === 'running' || (status as string) === 'awaiting_permission') && (
           <span className="font-mono text-[10px] text-ax-text-tertiary flex items-center gap-1">
             <Clock size={9} /> {elapsed}s
           </span>
@@ -232,7 +232,7 @@ export function HeadlessView({ onFileReferenceHandler, onSessionActive }: Headle
             disabled:opacity-50
             ${permissionMode === 'auto' ? 'text-ax-success' :
               permissionMode === 'plan' ? 'text-ax-info' :
-              permissionMode === 'ask' ? 'text-ax-warning' :
+              (permissionMode as string) === 'ask' ? 'text-ax-warning' :
               'text-ax-accent'
             } hover:brightness-125`}
         >
