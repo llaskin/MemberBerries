@@ -1,0 +1,30 @@
+{
+  "name": "axon-dev",
+  "version": "0.1.0",
+  "description": "Developer memory system — nightly AI rollups, morning briefings, decision traces",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axonembodied/axon-jarvis"
+  },
+  "homepage": "https://github.com/axonembodied/axon-jarvis#readme",
+  "keywords": [
+    "ai",
+    "developer-tools",
+    "memory",
+    "rollup",
+    "claude",
+    "context",
+    "decision-trace"
+  ],
+  "bin": {
+    "axon": "cli/axon"
+  },
+  "files": [
+    "cli/",
+    "protocol.md"
+  ],
+  "scripts": {
+    "prepublishOnly": "bash -n cli/axon"
+  }
+}
