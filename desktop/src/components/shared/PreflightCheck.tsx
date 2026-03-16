@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Check, AlertTriangle, X, Loader2, Terminal } from 'lucide-react'
+import { useDebugStore } from '@/store/debugStore'
 
 const STORAGE_KEY = 'axon-preflight-passed'
 
@@ -17,14 +18,45 @@ export function PreflightCheck() {
   const [loading, setLoading] = useState(true)
   const [fading, setFading] = useState(false)
 
+  const dismiss = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, '1')
+    setFading(true)
+    setTimeout(() => setVisible(false), 800)
+  }, [])
+
+  const manualRef = useRef(false)
+
+  const show = useCallback(() => {
+    manualRef.current = true
+    setFading(false)
+    setVisible(true)
+  }, [])
+
+  // Register debug action
+  const register = useDebugStore(s => s.register)
+  const unregister = useDebugStore(s => s.unregister)
+
+  useEffect(() => {
+    register({
+      id: 'show-preflight',
+      label: 'System Check',
+      active: visible,
+      toggle: () => {
+        if (visible) dismiss()
+        else show()
+      },
+    })
+    return () => unregister('show-preflight')
+  }, [register, unregister, visible, dismiss, show])
+
   const runChecks = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch('/api/axon/preflight')
       const data = await res.json()
       setChecks(data.checks || [])
-      // Auto-dismiss if everything passes
-      if (data.ok) {
+      // Auto-dismiss on first launch if everything passes (not when manually triggered)
+      if (data.ok && !manualRef.current) {
         localStorage.setItem(STORAGE_KEY, '1')
         setFading(true)
         setTimeout(() => setVisible(false), 800)
@@ -39,12 +71,6 @@ export function PreflightCheck() {
   useEffect(() => {
     if (visible) runChecks()
   }, [visible, runChecks])
-
-  const dismiss = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, '1')
-    setFading(true)
-    setTimeout(() => setVisible(false), 800)
-  }, [])
 
   if (!visible) return null
 
