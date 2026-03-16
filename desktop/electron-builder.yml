@@ -9,9 +9,9 @@ files:
   - "!node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE,license}"
   - "!node_modules/**/*.{ts,map}"
 asar: true
-icon: build/icon.png
+icon: icon.png
 mac:
-  icon: build/icon.icns
+  icon: icon.icns
   category: public.app-category.developer-tools
   target:
     - target: dmg
@@ -20,6 +20,7 @@ mac:
   entitlements: electron/entitlements.mac.plist
   entitlementsInherit: electron/entitlements.mac.plist
 dmg:
+  icon: icon.icns
   contents:
     - x: 130
       y: 220
