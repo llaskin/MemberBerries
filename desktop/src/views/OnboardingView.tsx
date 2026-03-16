@@ -22,7 +22,12 @@ interface ContextStatus {
   lastCommit: string
 }
 
-type OnboardingStep = 'select-repo' | 'axon-context' | 'user-context' | 'genesis' | 'review'
+type OnboardingStep = 'select-repo' | 'axon-context' | 'configure' | 'user-context' | 'genesis' | 'review'
+
+interface ConfigOverrides {
+  dendrites: Record<string, { enabled: boolean }>
+  rollup: { autoCollect: boolean; contextWindow: number }
+}
 
 type GenesisPhase = 'reading' | 'scanning' | 'analyzing' | 'composing' | 'done'
 
@@ -41,6 +46,16 @@ export function OnboardingView() {
   const [selectedRepo, setSelectedRepo] = useState<DiscoveredRepo | null>(null)
   const [userContext, setUserContext] = useState('')
   const [genesisContent, setGenesisContent] = useState('')
+  const [configOverrides, setConfigOverrides] = useState<ConfigOverrides>({
+    dendrites: {
+      'git-log': { enabled: true },
+      'file-tree': { enabled: true },
+      'session-summary': { enabled: false },
+      'todo-state': { enabled: true },
+      'manual-note': { enabled: true },
+    },
+    rollup: { autoCollect: true, contextWindow: 3 },
+  })
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const { projects, activeProject } = useProjectStore()
 
@@ -77,6 +92,7 @@ export function OnboardingView() {
         <h1 className="font-serif text-h1 text-ax-text-primary">
           {step === 'select-repo' && 'Choose a repository'}
           {step === 'axon-context' && 'Knowledge versioning'}
+          {step === 'configure' && 'Configure defaults'}
           {step === 'user-context' && 'Your role'}
           {step === 'genesis' && 'Genesis'}
           {step === 'review' && 'Your project, remembered'}
@@ -102,8 +118,16 @@ export function OnboardingView() {
         {step === 'axon-context' && selectedRepo && (
           <AxonContextSetup
             repo={selectedRepo}
-            onContinue={() => goTo('user-context', 'forward')}
+            onContinue={() => goTo('configure', 'forward')}
             onBack={() => goTo('select-repo', 'back')}
+          />
+        )}
+        {step === 'configure' && (
+          <ConfigureStep
+            config={configOverrides}
+            onChange={setConfigOverrides}
+            onContinue={() => goTo('user-context', 'forward')}
+            onBack={() => goTo('axon-context', 'back')}
           />
         )}
         {step === 'user-context' && selectedRepo && (
@@ -112,7 +136,7 @@ export function OnboardingView() {
               setUserContext(ctx)
               goTo('genesis', 'forward')
             }}
-            onBack={() => goTo('axon-context', 'back')}
+            onBack={() => goTo('configure', 'back')}
           />
         )}
         {step === 'genesis' && selectedRepo && (
@@ -129,6 +153,7 @@ export function OnboardingView() {
           <GenesisReview
             repo={selectedRepo}
             content={genesisContent}
+            configOverrides={configOverrides}
           />
         )}
       </div>
@@ -141,9 +166,10 @@ export function OnboardingView() {
 const STEPS: { id: OnboardingStep; label: string; num: number }[] = [
   { id: 'select-repo', label: 'Repository', num: 1 },
   { id: 'axon-context', label: 'Context', num: 2 },
-  { id: 'user-context', label: 'Role', num: 3 },
-  { id: 'genesis', label: 'Genesis', num: 4 },
-  { id: 'review', label: 'Review', num: 5 },
+  { id: 'configure', label: 'Configure', num: 3 },
+  { id: 'user-context', label: 'Role', num: 4 },
+  { id: 'genesis', label: 'Genesis', num: 5 },
+  { id: 'review', label: 'Review', num: 6 },
 ]
 
 function StepIndicator({ current }: { current: OnboardingStep }) {
@@ -655,7 +681,139 @@ function AxonContextSetup({ repo, onContinue, onBack }: {
   )
 }
 
-// ─── Step 3: User Context ──────────────────────────────────────
+// ─── Step 3: Configure Defaults ─────────────────────────────────
+
+const DENDRITE_LABELS: Record<string, { label: string; desc: string }> = {
+  'git-log': { label: 'Git Log', desc: 'Commit messages and diffs' },
+  'file-tree': { label: 'File Tree', desc: 'Directory structure snapshot' },
+  'session-summary': { label: 'Session Summary', desc: 'Claude Code session digests' },
+  'todo-state': { label: 'Todo State', desc: 'Task list changes and velocity' },
+  'manual-note': { label: 'Manual Notes', desc: 'Notes from axon log' },
+}
+
+function ConfigureStep({ config, onChange, onContinue, onBack }: {
+  config: ConfigOverrides
+  onChange: (c: ConfigOverrides) => void
+  onContinue: () => void
+  onBack: () => void
+}) {
+  const toggleDendrite = (name: string) => {
+    onChange({
+      ...config,
+      dendrites: {
+        ...config.dendrites,
+        [name]: { enabled: !config.dendrites[name].enabled },
+      },
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      <p className="text-body text-ax-text-secondary leading-relaxed max-w-2xl">
+        These settings control what Axon collects and how rollups are generated. Defaults work well for most projects — you can always change them later in Settings.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Dendrites card */}
+        <div className="bg-ax-elevated rounded-xl border border-ax-border p-4">
+          <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-ax-text-tertiary mb-2.5">Dendrites</h3>
+          <p className="text-micro text-ax-text-ghost mb-3">Signal sources collected nightly</p>
+          <div className="space-y-0">
+            {Object.entries(config.dendrites).map(([name, settings]) => {
+              const meta = DENDRITE_LABELS[name] || { label: name, desc: '' }
+              return (
+                <div key={name} className="flex items-center justify-between py-2 border-b border-ax-border-subtle last:border-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-1.5 h-1.5 rounded-full transition-colors ${settings.enabled ? 'bg-[var(--ax-success)]' : 'bg-ax-text-tertiary/40'}`} />
+                    <div className="min-w-0">
+                      <span className="font-mono text-[12px] text-ax-text-primary">{meta.label}</span>
+                      <p className="font-mono text-[10px] text-ax-text-ghost">{meta.desc}</p>
+                    </div>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={settings.enabled}
+                    onClick={() => toggleDendrite(name)}
+                    className={`relative inline-flex h-[18px] w-8 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                      settings.enabled ? 'bg-[var(--ax-success)]' : 'bg-ax-sunken'
+                    }`}
+                  >
+                    <span className={`inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${
+                      settings.enabled ? 'translate-x-[16px]' : 'translate-x-[3px]'
+                    }`} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Rollup card */}
+        <div className="bg-ax-elevated rounded-xl border border-ax-border p-4">
+          <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-ax-text-tertiary mb-2.5">Rollup</h3>
+          <p className="text-micro text-ax-text-ghost mb-3">Nightly synthesis settings</p>
+          <div className="space-y-0">
+            <div className="flex items-center justify-between py-2 border-b border-ax-border-subtle">
+              <span className="text-[13px] text-ax-text-tertiary">Auto Collect</span>
+              <button
+                role="switch"
+                aria-checked={config.rollup.autoCollect}
+                onClick={() => onChange({ ...config, rollup: { ...config.rollup, autoCollect: !config.rollup.autoCollect } })}
+                className={`relative inline-flex h-[18px] w-8 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                  config.rollup.autoCollect ? 'bg-[var(--ax-success)]' : 'bg-ax-sunken'
+                }`}
+              >
+                <span className={`inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${
+                  config.rollup.autoCollect ? 'translate-x-[16px]' : 'translate-x-[3px]'
+                }`} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-ax-border-subtle">
+              <span className="text-[13px] text-ax-text-tertiary">Context Window</span>
+              <select
+                value={config.rollup.contextWindow}
+                onChange={e => onChange({ ...config, rollup: { ...config.rollup, contextWindow: parseInt(e.target.value) } })}
+                className="font-mono text-[12px] px-1.5 py-0.5 rounded bg-ax-sunken text-ax-text-primary border-none outline-none cursor-pointer"
+              >
+                {[3, 5, 10, 20, 50].map(n => (
+                  <option key={n} value={n}>{n} episodes</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-[13px] text-ax-text-tertiary">Model</span>
+              <span className="font-mono text-[12px] text-ax-text-secondary">claude-opus-4-6</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between pt-2">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-small text-ax-text-tertiary hover:text-ax-brand transition-colors"
+        >
+          <ArrowLeft size={14} />
+          Back
+        </button>
+        <button
+          onClick={onContinue}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-ax-brand text-white font-medium
+            hover:bg-ax-brand-hover transition-all duration-200
+            shadow-[0_2px_8px_rgba(var(--ax-shadow-color),0.15)]
+            hover:shadow-[0_4px_16px_rgba(var(--ax-shadow-color),0.2)]
+            hover:-translate-y-0.5"
+        >
+          Continue
+          <ArrowRight size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Step 4: User Context ──────────────────────────────────────
 
 function UserContextStep({ onContinue, onBack }: {
   onContinue: (context: string) => void
@@ -930,14 +1088,33 @@ function GenesisProgress({ repo, userContext, onComplete }: {
 
 // ─── Step 4: Genesis Review ─────────────────────────────────────
 
-function GenesisReview({ repo, content }: {
+function GenesisReview({ repo, content, configOverrides }: {
   repo: DiscoveredRepo
   content: string
+  configOverrides: ConfigOverrides
 }) {
   const setView = useUIStore(s => s.setView)
   const setProjects = useProjectStore(s => s.setProjects)
   const setActiveProject = useProjectStore(s => s.setActiveProject)
   const backend = useBackend()
+
+  // Apply config overrides after genesis creates config.yaml
+  const appliedRef = useRef(false)
+  useEffect(() => {
+    if (appliedRef.current) return
+    appliedRef.current = true
+    fetch(`/api/axon/projects/${encodeURIComponent(repo.name)}/config`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dendrites: configOverrides.dendrites,
+        rollup: {
+          auto_collect: configOverrides.rollup.autoCollect,
+          context_window: configOverrides.rollup.contextWindow,
+        },
+      }),
+    }).catch(() => {})
+  }, [repo.name, configOverrides])
 
   const handleContinue = useCallback(async () => {
     // Refresh project list to pick up the new project
