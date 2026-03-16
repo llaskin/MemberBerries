@@ -374,6 +374,16 @@ body {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes hintFlash {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.animate-hint-flash {
+  animation: hintFlash 4s ease-out both;
+}
+
 /* ================================================
    Morning Chat — Thinking Indicator
    ================================================ */

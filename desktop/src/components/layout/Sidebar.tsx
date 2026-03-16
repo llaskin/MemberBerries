@@ -1,8 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useProjects } from '@/hooks/useProjects'
 import { useProjectStore } from '@/store/projectStore'
 import { useUIStore, type ViewId } from '@/store/uiStore'
-import { Clock, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, Brain, PanelLeftClose, PanelLeftOpen, Keyboard, CheckSquare, ChevronRight, Archive, GitBranch, GripVertical, HelpCircle } from 'lucide-react'
+import { useDebugStore } from '@/store/debugStore'
+import { Clock, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, Brain, PanelLeftClose, PanelLeftOpen, Keyboard, CheckSquare, ChevronRight, Archive, GitBranch, GripVertical, HelpCircle, X } from 'lucide-react'
+
+const HINT_STORAGE_KEY = 'axon-shortcut-hints-dismissed'
+const HINT_DURATION_MS = 4000
 
 const mainNav: { id: ViewId; label: string; icon: typeof Clock }[] = [
   { id: 'morning', label: 'Morning', icon: Coffee },
@@ -96,18 +101,76 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
     dragThreshold.current = false
   }, [dragIdx, overIdx, getDragOrder, reorderProjects])
 
+  // Shortcut hint — speech bubble that pops out to the right of the sidebar
+  const [hint, setHint] = useState<{ keys: string[]; desc: string; top: number } | null>(null)
+  const [hintsDismissed, setHintsDismissed] = useState(
+    () => localStorage.getItem(HINT_STORAGE_KEY) === 'true'
+  )
+  const hintTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // Clear stale keys from previous versions on mount
+  useEffect(() => {
+    localStorage.removeItem('axon-shortcut-hints-seen')
+  }, [])
+
+  const showHint = useCallback((keys: string[], desc: string, el: HTMLElement) => {
+    if (localStorage.getItem(HINT_STORAGE_KEY) === 'true') return
+    if (hintTimer.current) clearTimeout(hintTimer.current)
+    const rect = el.getBoundingClientRect()
+    setHint({ keys, desc, top: rect.top + rect.height / 2 })
+    hintTimer.current = setTimeout(() => setHint(null), HINT_DURATION_MS)
+  }, [])
+  const dismissHints = useCallback(() => {
+    localStorage.setItem(HINT_STORAGE_KEY, 'true')
+    setHint(null)
+    setHintsDismissed(true)
+    if (hintTimer.current) clearTimeout(hintTimer.current)
+  }, [])
+
+  // Register debug action to reset/toggle hint dismissal
+  const debugRegister = useDebugStore(s => s.register)
+  const debugUnregister = useDebugStore(s => s.unregister)
+  useEffect(() => {
+    debugRegister({
+      id: 'shortcut-hints',
+      label: `Shortcut hints (${hintsDismissed ? 'dismissed' : 'active'})`,
+      active: !hintsDismissed,
+      toggle: () => {
+        if (hintsDismissed) {
+          localStorage.removeItem(HINT_STORAGE_KEY)
+          setHintsDismissed(false)
+        } else {
+          localStorage.setItem(HINT_STORAGE_KEY, 'true')
+          setHintsDismissed(true)
+          setHint(null)
+        }
+      },
+    })
+    return () => debugUnregister('shortcut-hints')
+  }, [hintsDismissed, debugRegister, debugUnregister])
+
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const shortcutsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!shortcutsOpen) return
-    const handler = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent) => {
       if (shortcutsRef.current && !shortcutsRef.current.contains(e.target as Node)) {
         setShortcutsOpen(false)
       }
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    const handleLeave = (e: MouseEvent) => {
+      if (shortcutsRef.current && !shortcutsRef.current.contains(e.relatedTarget as Node)) {
+        setShortcutsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    shortcutsRef.current?.addEventListener('mouseleave', handleLeave)
+    const ref = shortcutsRef.current
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      ref?.removeEventListener('mouseleave', handleLeave)
+    }
   }, [shortcutsOpen])
 
   useEffect(() => {
@@ -116,7 +179,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
     return () => window.removeEventListener('toggle-shortcuts', toggle)
   }, [])
 
-  return (
+  const sidebar = (
     <aside
       className={`h-screen bg-ax-sidebar flex flex-col shrink-0 transition-[width] duration-200 ${
         collapsed ? 'w-12' : 'w-64'
@@ -190,7 +253,12 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
               <button
                 key={p.name}
                 data-drag-item
-                onClick={() => { if (!dragThreshold.current) setActiveProject(p.name) }}
+                onClick={(e) => {
+                  if (!dragThreshold.current) {
+                    setActiveProject(p.name)
+                    showHint(['⌘', '↑', '↓'], 'to switch projects', e.currentTarget)
+                  }
+                }}
                 onPointerDown={(e) => handlePointerDown(e, activeProjects.findIndex(ap => ap.name === p.name))}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -287,7 +355,11 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
           return (
             <button
               key={item.id}
-              onClick={() => !disabled && setView(item.id)}
+              onClick={(e) => {
+                if (disabled) return
+                setView(item.id)
+                if (!collapsed) showHint(['⌘', '←', '→'], 'to slide views', e.currentTarget)
+              }}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               aria-disabled={disabled}
@@ -314,12 +386,16 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
       {/* Utility nav — Terminal, Settings — anchored above footer */}
       <div className={`${collapsed ? 'px-1' : 'px-3'} pb-2`}>
         <div className={`border-t border-white/10 ${collapsed ? 'mx-1' : 'mx-2'} mb-1.5`} />
-        {utilNav.map((item) => {
+        {utilNav.map((item, idx) => {
           const isActive = activeView === item.id
+          const keyNum = mainNav.length + idx + 1
           return (
             <button
               key={item.id}
-              onClick={() => setView(item.id)}
+              onClick={(e) => {
+                setView(item.id)
+                if (!collapsed) showHint(['⌘', String(keyNum)], `for ${item.label}`, e.currentTarget)
+              }}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               className={`w-full text-left rounded-lg mb-0.5 flex items-center transition-all duration-150
@@ -431,6 +507,101 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
           }
         </button>
       </div>
+
     </aside>
+  )
+
+  const hintBubble = hint && !collapsed ? createPortal(
+    <div
+      className="animate-hint-flash"
+      style={{
+        position: 'fixed',
+        zIndex: 99999,
+        top: `${Math.round(hint.top)}px`,
+        left: '272px',
+        pointerEvents: 'auto',
+      }}
+    >
+      {/* Vertically center on the button */}
+      <div style={{ transform: 'translateY(-50%)' }}>
+        {/* Left-pointing arrow */}
+        <div
+          style={{
+            position: 'absolute',
+            left: -4,
+            top: '50%',
+            width: 8,
+            height: 8,
+            background: '#1e1b18',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRight: 'none',
+            borderTop: 'none',
+            transform: 'translateY(-50%) rotate(45deg)',
+          }}
+        />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            background: '#1e1b18',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 10,
+            padding: '6px 8px 6px 12px',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)',
+          }}
+        >
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>Tip</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            {hint.keys.map((k) => (
+              <kbd
+                key={k}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  color: 'rgba(255,255,255,0.85)',
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  padding: '2px 5px',
+                  borderRadius: 4,
+                  lineHeight: 1,
+                }}
+              >
+                {k}
+              </kbd>
+            ))}
+          </span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>{hint.desc}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); dismissHints() }}
+            style={{
+              marginLeft: 2,
+              padding: 2,
+              borderRadius: 4,
+              border: 'none',
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.3)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.7)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.3)'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            aria-label="Don't show hints again"
+          >
+            <X size={11} />
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null
+
+  return (
+    <>
+      {sidebar}
+      {hintBubble}
+    </>
   )
 }
