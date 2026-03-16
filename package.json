@@ -1,6 +1,6 @@
 {
   "name": "axon-dev",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Developer memory system — nightly AI rollups, morning briefings, decision traces",
   "license": "MIT",
   "repository": {
