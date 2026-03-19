@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import { createServer } from 'http'
 import { join, resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { homedir } from 'os'
 import { WebSocketServer } from 'ws'
 import express from 'express'
 
@@ -11,12 +12,9 @@ const ROOT = resolve(__dirname, '..')
 
 // Dynamic imports for the extracted middleware (TypeScript compiled to dist/)
 async function start() {
-  // Import compiled server bundle
-  const { createAxonMiddleware, handleAxonUpgrade, setupCleanupHandlers } = await import(
-    join(ROOT, 'dist-electron', 'axonMiddleware.mjs')
-  )
-  const { setupTerminalWs } = await import(
-    join(ROOT, 'dist-electron', 'terminalWs.mjs')
+  // Import compiled server bundle — single bundle ensures shared module state
+  const { createAxonMiddleware, handleAxonUpgrade, setupCleanupHandlers, setupTerminalWs } = await import(
+    join(ROOT, 'dist-electron', 'electronEntry.mjs')
   )
 
   const expressApp = express()
@@ -34,7 +32,7 @@ async function start() {
   setupCleanupHandlers(httpServer)
 
   // CLI dir for cron/init scripts — check npm global install first, then local
-  const homeAxon = join(process.env.HOME || '', '.axon')
+  const homeAxon = join(process.env.HOME || homedir(), '.axon')
   let cliDir
   try {
     const { execSync } = await import('child_process')

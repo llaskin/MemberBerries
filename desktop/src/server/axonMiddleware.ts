@@ -119,7 +119,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         let shellPath = process.env.PATH || ''
         try {
           const shell = process.env.SHELL || '/bin/zsh'
-          shellPath = execSync(`${shell} -ilc 'echo $PATH'`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 3000 }).trim()
+          shellPath = execSync(`${shell} -lc 'printenv PATH'`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 3000 }).trim()
         } catch { /* fall back to process.env.PATH */ }
         const execOpts = { stdio: 'pipe' as const, env: { ...process.env, PATH: shellPath }, timeout: 5000 }
 
@@ -1513,8 +1513,14 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
           if (projectPath && existsSync(projectPath)) cwd = projectPath
         } catch { /* use cwd */ }
 
-        const terminalId = spawnTerminal(cwd, command, sessionId)
-        res.end(JSON.stringify({ terminalId }))
+        try {
+          const terminalId = spawnTerminal(cwd, command, sessionId)
+          res.end(JSON.stringify({ terminalId }))
+        } catch (err) {
+          console.error('[Axon API] Terminal spawn failed:', err)
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: `Terminal spawn failed: ${String(err)}` }))
+        }
         return
       }
 
@@ -1890,7 +1896,9 @@ export function handleAxonUpgrade(
   const url = new URL(req.url || '', `http://${req.headers.host}`)
   if (url.pathname === '/api/axon/terminal/ws') {
     const termId = url.searchParams.get('id')
+    console.log(`[Axon WS] Upgrade request: termId=${termId} hasTerminal=${termId ? hasTerminal(termId) : 'N/A'}`)
     if (!termId || !hasTerminal(termId)) {
+      console.error(`[Axon WS] Rejected: terminal ${termId} not found`)
       socket.destroy()
       return
     }

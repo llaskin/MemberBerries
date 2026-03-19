@@ -8,7 +8,7 @@ files:
   - electron/**/*
   - "!node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE,license}"
   - "!node_modules/**/*.{ts,map}"
-asar: true
+asar: false
 icon: icon.png
 mac:
   icon: icon.icns
@@ -16,9 +16,11 @@ mac:
   target:
     - target: dmg
       arch: [arm64, x64]
-  hardenedRuntime: true
-  entitlements: electron/entitlements.mac.plist
-  entitlementsInherit: electron/entitlements.mac.plist
+  hardenedRuntime: false
+  extendInfo:
+    NSDesktopFolderUsageDescription: "Axon reads your project files and developer memory (~/.axon) to provide context-aware briefings."
+    NSDocumentsFolderUsageDescription: "Axon reads your project files and developer memory (~/.axon) to provide context-aware briefings."
+    NSNetworkVolumesUsageDescription: "Axon needs access to read project files that may be on network or external volumes."
 dmg:
   icon: icon.icns
   contents:

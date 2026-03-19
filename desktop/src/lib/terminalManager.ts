@@ -1,4 +1,14 @@
 import * as pty from 'node-pty'
+import { execSync } from 'node:child_process'
+import { appendFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const LOG_FILE = join(process.env.HOME || '/tmp', '.axon', 'terminal-debug.log')
+function debugLog(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`
+  try { appendFileSync(LOG_FILE, line) } catch { /* ignore */ }
+  console.log(msg)
+}
 
 interface TerminalInstance {
   pty: pty.IPty
@@ -12,6 +22,24 @@ const terminals = new Map<string, TerminalInstance>()
 let counter = 0
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null
 
+// Resolve the user's full login shell PATH once at import time
+// Electron's sandboxed PATH doesn't include nvm/brew/etc paths
+let resolvedPath = process.env.PATH || ''
+try {
+  const shell = process.env.SHELL || '/bin/zsh'
+  // Use -lc (login, non-interactive) + printenv to get clean PATH
+  // Avoids macOS "Restored session:" messages from -i flag
+  resolvedPath = execSync(`${shell} -lc 'printenv PATH'`, {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: 5000,
+  }).trim()
+} catch { /* fall back to process.env.PATH */ }
+
+export function getResolvedPath(): string {
+  return resolvedPath
+}
+
 export function startHeartbeat(): void {
   if (heartbeatInterval) return
   heartbeatInterval = setInterval(cleanStale, 30_000)
@@ -21,13 +49,14 @@ export function spawnTerminal(cwd: string, command?: string, sessionId?: string)
   const id = `term-${++counter}-${Date.now()}`
   const shell = process.env.SHELL || '/bin/zsh'
 
-  let args: string[]
+  // Determine the command to run inside the shell
+  let cmd: string
   if (sessionId) {
-    args = ['-c', `claude --resume ${sessionId}`]
+    cmd = `claude --resume ${sessionId}`
   } else if (command) {
-    args = ['-c', command]
+    cmd = command
   } else {
-    args = ['-c', 'claude']
+    cmd = 'claude'
   }
 
   // Clean env: remove CLAUDECODE to prevent nested session guard
@@ -37,27 +66,53 @@ export function spawnTerminal(cwd: string, command?: string, sessionId?: string)
       cleanEnv[k] = v
     }
   }
+  cleanEnv.PATH = resolvedPath
   cleanEnv.TERM = 'xterm-256color'
   cleanEnv.COLORTERM = 'truecolor'
 
-  const ptyProcess = pty.spawn(shell, args, {
-    name: 'xterm-256color',
-    cols: 120,
-    rows: 30,
-    cwd,
-    env: cleanEnv,
-  })
+  try {
+    debugLog(`[Axon Terminal] Spawning: shell=${shell} cmd="${cmd}" cwd=${cwd}`)
+    debugLog(`[Axon Terminal] PATH (first 200 chars): ${cleanEnv.PATH?.slice(0, 200)}`)
 
-  terminals.set(id, {
-    pty: ptyProcess,
-    id,
-    cwd,
-    createdAt: Date.now(),
-    wsConnected: false,
-  })
+    const ptyProcess = pty.spawn(shell, ['-il'], {
+      name: 'xterm-256color',
+      cols: 120,
+      rows: 30,
+      cwd,
+      env: cleanEnv,
+    })
 
-  startHeartbeat()
-  return id
+    // Log all output and exit for debugging
+    let earlyOutput = ''
+    const earlyListener = ptyProcess.onData((data: string) => {
+      earlyOutput += data
+      if (earlyOutput.length > 5000) earlyListener.dispose()
+    })
+
+    ptyProcess.onExit(({ exitCode, signal }) => {
+      debugLog(`[Axon Terminal] PTY ${id} exited: code=${exitCode} signal=${signal}`)
+      debugLog(`[Axon Terminal] Full output (${earlyOutput.length} chars): ${earlyOutput.slice(0, 2000)}`)
+    })
+
+    // Write the command after a short delay to let shell profile load
+    setTimeout(() => {
+      ptyProcess.write(cmd + '\n')
+    }, 500)
+
+    terminals.set(id, {
+      pty: ptyProcess,
+      id,
+      cwd,
+      createdAt: Date.now(),
+      wsConnected: false,
+    })
+
+    startHeartbeat()
+    return id
+  } catch (err) {
+    debugLog(`[Axon Terminal] Failed to spawn PTY: ${err}`)
+    throw err
+  }
 }
 
 export function hasTerminal(id: string): boolean {
