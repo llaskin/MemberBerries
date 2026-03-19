@@ -25,7 +25,7 @@ async function start() {
   setupTerminalWs(wss)
 
   httpServer.on('upgrade', (req, socket, head) => {
-    handleAxonUpgrade(wss, req, socket, head)
+    handleAxonUpgrade(wss, req, socket, head, homeAxon)
   })
 
   // Cleanup on exit
@@ -70,12 +70,24 @@ async function start() {
     res.sendFile(join(ROOT, 'dist', 'index.html'))
   })
 
-  // Find a free port
+  // Read server config for remote access
+  const { readFileSync } = await import('fs')
+  let serverEnabled = false
+  let serverPort = 0 // 0 = OS picks a free port
+  try {
+    const srvCfg = JSON.parse(readFileSync(join(homeAxon, 'server.json'), 'utf-8'))
+    if (srvCfg.enabled && srvCfg.passwordHash) {
+      serverEnabled = true
+      serverPort = srvCfg.port || 3847
+    }
+  } catch { /* no config — local only */ }
+
+  const host = serverEnabled ? '0.0.0.0' : '127.0.0.1'
   await new Promise((resolve) => {
-    httpServer.listen(0, () => resolve(undefined))
+    httpServer.listen(serverPort, host, () => resolve(undefined))
   })
   const port = httpServer.address().port
-  console.log(`[Axon] Server running on http://localhost:${port}`)
+  console.log(`[Axon] Server running on http://${host}:${port}${serverEnabled ? ' (remote access enabled)' : ''}`)
 
   // Create browser window
   const win = new BrowserWindow({

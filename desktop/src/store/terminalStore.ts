@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getStoredToken } from '@/lib/apiClient'
 
 export type TerminalStatus = 'spawning' | 'connecting' | 'connected' | 'exited' | 'error'
 
@@ -93,9 +94,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       },
     }))
 
-    // Open WebSocket
+    // Open WebSocket (include auth token for remote connections)
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${protocol}//${location.host}/api/axon/terminal/ws?id=${terminalId}`)
+    const token = getStoredToken()
+    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
+    const ws = new WebSocket(`${protocol}//${location.host}/api/axon/terminal/ws?id=${terminalId}${tokenParam}`)
     int.ws = ws
 
     ws.onopen = () => {

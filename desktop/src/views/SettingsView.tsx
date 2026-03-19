@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Loader2, Clock, Zap, Eye, FileText, Terminal, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Loader2, Clock, Zap, Eye, EyeOff, FileText, Terminal, Search, X, Copy, Check, ExternalLink, Globe } from 'lucide-react'
 import { parse as parseYaml } from 'yaml'
 import { useProjectStore } from '@/store/projectStore'
 import { useUIStore } from '@/store/uiStore'
@@ -614,6 +614,277 @@ function CronJobsPanel({ project }: { project: string }) {
   )
 }
 
+// ─── Remote Access Card ─────────────────────────────────────────
+
+function RemoteAccessCard() {
+  const [config, setConfig] = useState<{ enabled: boolean; port: number; hasPassword: boolean } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [portDraft, setPortDraft] = useState('')
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const res = await fetch('/api/axon/server-config')
+      const data = await res.json()
+      setConfig(data)
+      setPortDraft(String(data.port || 3847))
+    } catch { /* offline */ }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchConfig() }, [fetchConfig])
+
+  const handleToggle = useCallback(async (enabled: boolean) => {
+    if (enabled && !config?.hasPassword) {
+      // Need to set password first
+      setShowPasswordModal(true)
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/axon/server-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      })
+      const data = await res.json()
+      if (data.ok) setConfig(c => c ? { ...c, enabled: data.enabled } : c)
+    } catch {}
+    setSaving(false)
+  }, [config])
+
+  const handleSetPassword = useCallback(async () => {
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch('/api/axon/server-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, enabled: true }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setConfig(c => c ? { ...c, enabled: data.enabled, hasPassword: data.hasPassword } : c)
+        setShowPasswordModal(false)
+        setPassword('')
+        setConfirmPassword('')
+      } else {
+        setError(data.error || 'Failed to save')
+      }
+    } catch {
+      setError('Connection failed')
+    }
+    setSaving(false)
+  }, [password, confirmPassword])
+
+  const handlePortSave = useCallback(async () => {
+    const port = parseInt(portDraft)
+    if (isNaN(port) || port < 1024 || port > 65535) return
+    try {
+      await fetch('/api/axon/server-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port }),
+      })
+      setConfig(c => c ? { ...c, port } : c)
+    } catch {}
+  }, [portDraft])
+
+  const connectionUrl = `http://${window.location.hostname}:${config?.port || 3847}`
+
+  const copyUrl = useCallback(() => {
+    navigator.clipboard.writeText(connectionUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }, [connectionUrl])
+
+  if (loading) return null
+
+  return (
+    <>
+      <Card title="Remote Access" className="animate-fade-in-up">
+        {/* Status indicator */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-full ${config?.enabled ? 'bg-[var(--ax-success)] animate-pulse' : 'bg-ax-text-tertiary'}`} />
+            <span className="font-mono text-[11px] text-ax-text-primary">
+              {config?.enabled ? `Online · port ${config.port}` : 'Disabled'}
+            </span>
+          </div>
+          <Globe size={14} className="text-ax-text-tertiary" />
+        </div>
+
+        {/* Toggle */}
+        <div className="flex items-center justify-between py-2 border-t border-ax-border-subtle">
+          <span className="text-[12px] text-ax-text-secondary">Allow remote connections</span>
+          <Toggle
+            enabled={config?.enabled || false}
+            onChange={v => !saving && handleToggle(v)}
+          />
+        </div>
+
+        {/* Enabled state — show connection details */}
+        {config?.enabled && (
+          <div className="mt-2 space-y-2.5 pt-2 border-t border-ax-border-subtle">
+            {/* Connection URL */}
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-wider text-ax-text-tertiary mb-1">Connection URL</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 font-mono text-[11px] text-ax-text-primary bg-ax-sunken rounded px-2 py-1.5 truncate border border-ax-border-subtle">
+                  {connectionUrl}
+                </code>
+                <button
+                  onClick={copyUrl}
+                  className="flex items-center gap-1 font-mono text-[10px] px-2 py-1.5 rounded bg-ax-sunken text-ax-text-secondary border border-ax-border-subtle hover:bg-ax-sunken/80 transition-colors shrink-0"
+                >
+                  {copied ? <Check size={10} className="text-[var(--ax-success)]" /> : <Copy size={10} />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {/* Port */}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-ax-text-tertiary">Port</span>
+              <input
+                type="number"
+                value={portDraft}
+                onChange={e => setPortDraft(e.target.value)}
+                onBlur={handlePortSave}
+                aria-label="Port number"
+                className="w-20 bg-ax-sunken border border-ax-border-subtle rounded px-2 py-1 font-mono text-micro text-ax-text-primary text-right outline-none focus:border-ax-brand transition-colors"
+              />
+            </div>
+
+            {/* Change password button */}
+            <button
+              onClick={() => { setShowPasswordModal(true); setPassword(''); setConfirmPassword('') }}
+              className="font-mono text-[10px] text-ax-brand hover:text-ax-brand-hover transition-colors"
+            >
+              Change password
+            </button>
+          </div>
+        )}
+
+        {/* Guidance */}
+        <div className="mt-3 pt-3 border-t border-ax-border-subtle">
+          {config?.enabled ? (
+            <div className="bg-ax-sunken rounded-lg p-3 space-y-1.5">
+              <p className="font-mono text-[10px] text-ax-text-secondary font-medium">Connect from another device:</p>
+              <ol className="font-mono text-[10px] text-ax-text-tertiary space-y-0.5 list-decimal list-inside">
+                <li>Install <a href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer" className="text-ax-brand hover:underline">Tailscale</a> on both devices</li>
+                <li>Open the URL above in a browser</li>
+                <li>Enter your server password</li>
+              </ol>
+            </div>
+          ) : (
+            <p className="font-mono text-[10px] text-ax-text-tertiary leading-relaxed">
+              Access Axon from another device over your network.
+              Requires <a href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer" className="text-ax-brand hover:underline inline-flex items-center gap-0.5">Tailscale <ExternalLink size={8} /></a> for secure connections.
+            </p>
+          )}
+        </div>
+      </Card>
+
+      {/* Password Setup Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-ax-base/95 backdrop-blur-sm animate-fade-in">
+          <div className="max-w-sm w-full mx-4 animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-ax-brand/10 flex items-center justify-center">
+                <Globe size={18} className="text-ax-brand" />
+              </div>
+              <div>
+                <h2 className="font-serif italic text-h3 text-ax-text-primary">
+                  {config?.hasPassword ? 'Change Password' : 'Set Server Password'}
+                </h2>
+                <p className="text-small text-ax-text-secondary">
+                  {config?.hasPassword ? 'Enter a new password' : 'Required to enable remote access'}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-ax-elevated rounded-xl border border-ax-border p-5 space-y-3">
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setError('') }}
+                  placeholder="Password (min 6 characters)"
+                  aria-label="Password"
+                  autoFocus
+                  className="w-full bg-ax-sunken rounded-lg border border-ax-border-subtle px-3 py-2.5 pr-10
+                    text-body text-ax-text-primary placeholder:text-ax-text-tertiary/50
+                    outline-none focus:border-ax-brand transition-colors font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  aria-label={showPw ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
+                >
+                  {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+
+              <input
+                type={showPw ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={e => { setConfirmPassword(e.target.value); setError('') }}
+                placeholder="Confirm password"
+                aria-label="Confirm password"
+                className="w-full bg-ax-sunken rounded-lg border border-ax-border-subtle px-3 py-2.5
+                  text-body text-ax-text-primary placeholder:text-ax-text-tertiary/50
+                  outline-none focus:border-ax-brand transition-colors font-mono"
+              />
+
+              {error && (
+                <p className="text-micro font-mono text-[var(--ax-error)]">{error}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-4">
+              <button
+                onClick={() => { setShowPasswordModal(false); setError('') }}
+                className="px-4 py-2 rounded-lg font-mono text-small
+                  text-ax-text-secondary hover:text-ax-text-primary
+                  border border-ax-border-subtle hover:border-ax-border transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSetPassword}
+                disabled={saving || !password.trim() || !confirmPassword.trim()}
+                className="px-6 py-2 rounded-lg font-mono text-small
+                  bg-ax-brand text-white hover:bg-ax-brand-hover transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  flex items-center gap-2"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+                {config?.hasPassword ? 'Update Password' : 'Enable Server'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ─── Main Settings View ──────────────────────────────────────────
 
 function SystemHealthButton() {
@@ -1098,9 +1369,10 @@ export function SettingsView() {
           </div>
         </div>
 
-        {/* ─── Right Column: Cron + Jobs + System Health ─── */}
+        {/* ─── Right Column: Cron + Jobs + System Health + Remote ─── */}
         <div className="lg:sticky lg:top-0 space-y-4">
           <CronJobsPanel project={selectedProject} />
+          <RemoteAccessCard />
           <SystemHealthButton />
         </div>
 

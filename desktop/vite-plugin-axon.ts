@@ -17,7 +17,7 @@ export function axonDevApi(): Plugin {
 
       // Handle WebSocket upgrade ONLY for terminal path
       server.httpServer?.on('upgrade', (req, socket, head) => {
-        const handled = handleAxonUpgrade(wss, req, socket, head)
+        const handled = handleAxonUpgrade(wss, req, socket, head, AXON_HOME)
         if (!handled) {
           // Non-matching upgrades (e.g. /__vite_hmr) fall through to Vite
         }

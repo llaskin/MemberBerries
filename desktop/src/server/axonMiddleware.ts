@@ -3,6 +3,7 @@ import { existsSync, writeFileSync, renameSync, mkdirSync, readFileSync, rmSync,
 import { join, resolve } from 'path'
 import { homedir } from 'os'
 import { spawn, execSync } from 'child_process'
+import { hashSync, compareSync } from 'bcryptjs'
 
 /* ── Discovery cache ── */
 let discoveryCache: { repos: { name: string; path: string; remote: string; commitCount: number; lastActivity: string }[]; timestamp: number } | null = null
@@ -140,6 +141,66 @@ function resolveShellPath(): string {
   }
 }
 
+/* ── Server config (remote access) ── */
+
+interface ServerConfig {
+  enabled: boolean
+  port: number
+  passwordHash: string
+  createdAt: string
+}
+
+function readServerConfig(axonHome: string): ServerConfig | null {
+  try {
+    return JSON.parse(readFileSync(join(axonHome, 'server.json'), 'utf-8'))
+  } catch { return null }
+}
+
+function writeServerConfig(axonHome: string, cfg: ServerConfig) {
+  writeFileSync(join(axonHome, 'server.json'), JSON.stringify(cfg, null, 2), { mode: 0o600 })
+}
+
+/* ── Session token store (in-memory, survives hot reloads via module scope) ── */
+const sessionTokens = new Map<string, number>() // token → created timestamp
+const SESSION_TTL = 24 * 60 * 60 * 1000 // 24 hours
+const failedAttempts = new Map<string, { count: number; lastAttempt: number }>()
+
+function generateSessionToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+function isValidSession(token: string): boolean {
+  const created = sessionTokens.get(token)
+  if (!created) return false
+  if (Date.now() - created > SESSION_TTL) {
+    sessionTokens.delete(token)
+    return false
+  }
+  return true
+}
+
+function checkRateLimit(ip: string): boolean {
+  const entry = failedAttempts.get(ip)
+  if (!entry) return true
+  const elapsed = Date.now() - entry.lastAttempt
+  // After 5 failures: 30s cooldown. After 10: 5min.
+  const cooldown = entry.count >= 10 ? 300_000 : entry.count >= 5 ? 30_000 : 0
+  return elapsed >= cooldown
+}
+
+function recordFailedAttempt(ip: string) {
+  const entry = failedAttempts.get(ip) || { count: 0, lastAttempt: 0 }
+  entry.count++
+  entry.lastAttempt = Date.now()
+  failedAttempts.set(ip, entry)
+}
+
+function clearFailedAttempts(ip: string) {
+  failedAttempts.delete(ip)
+}
+
 /* ── Create the middleware ── */
 
 export function createAxonMiddleware(config: AxonMiddlewareConfig) {
@@ -147,6 +208,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
   let lastSessionIndex = 0
   // Resolve shell PATH once at startup — reused by all endpoints
   const resolvedShellPath = resolveShellPath()
+  // Load server config for auth
+  let serverConfig = readServerConfig(AXON_HOME)
 
   return async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     const url = req.url || ''
@@ -154,7 +217,112 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
     res.setHeader('Content-Type', 'application/json')
 
+    // Auth check — use req.socket.remoteAddress (NOT req.ip) to prevent X-Forwarded-For spoofing
+    const remoteIp = req.socket.remoteAddress || ''
+    const isLocal = remoteIp === '127.0.0.1' || remoteIp === '::1' || remoteIp === '::ffff:127.0.0.1'
+
+    // Default-deny remote connections unless auth passes
+    if (!isLocal) {
+      // Allow server-config GET (needed for UI to check state) and login endpoint
+      const isPublicEndpoint = url === '/api/axon/server-config' || url === '/api/axon/server-config/login'
+      if (!isPublicEndpoint) {
+        const authHeader = req.headers.authorization || ''
+        const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+        if (!token || !isValidSession(token)) {
+          res.statusCode = 401
+          res.end(JSON.stringify({ error: 'Unauthorized' }))
+          return
+        }
+      }
+    }
+
     try {
+      // GET /api/axon/server-config — remote access configuration (public, no secrets)
+      if (url === '/api/axon/server-config' && req.method === 'GET') {
+        serverConfig = readServerConfig(AXON_HOME)
+        res.end(JSON.stringify({
+          enabled: serverConfig?.enabled || false,
+          port: serverConfig?.port || 3847,
+          hasPassword: !!serverConfig?.passwordHash,
+        }))
+        return
+      }
+
+      // POST /api/axon/server-config — update remote access settings (local only)
+      if (url === '/api/axon/server-config' && req.method === 'POST') {
+        if (!isLocal) {
+          res.statusCode = 403
+          res.end(JSON.stringify({ error: 'Server config can only be changed locally' }))
+          return
+        }
+        const body = await new Promise<string>((resolve) => {
+          let data = ''
+          req.on('data', (chunk: Buffer) => { data += chunk.toString() })
+          req.on('end', () => resolve(data))
+        })
+        const { enabled, port, password } = JSON.parse(body) as {
+          enabled?: boolean
+          port?: number
+          password?: string
+        }
+
+        const current = readServerConfig(AXON_HOME) || { enabled: false, port: 3847, passwordHash: '', createdAt: new Date().toISOString() }
+
+        if (password) {
+          current.passwordHash = hashSync(password, 10)
+          // Invalidate all existing sessions when password changes
+          sessionTokens.clear()
+        }
+        if (enabled !== undefined) {
+          if (enabled && !current.passwordHash) {
+            res.statusCode = 400
+            res.end(JSON.stringify({ error: 'Set a password before enabling remote access' }))
+            return
+          }
+          current.enabled = enabled
+        }
+        if (port !== undefined) {
+          current.port = port
+        }
+
+        writeServerConfig(AXON_HOME, current)
+        serverConfig = current
+        res.end(JSON.stringify({ ok: true, enabled: current.enabled, port: current.port, hasPassword: !!current.passwordHash }))
+        return
+      }
+
+      // POST /api/axon/server-config/login — verify password, return session token
+      if (url === '/api/axon/server-config/login' && req.method === 'POST') {
+        const clientIp = req.socket.remoteAddress || 'unknown'
+
+        // Rate limiting
+        if (!checkRateLimit(clientIp)) {
+          res.statusCode = 429
+          res.end(JSON.stringify({ error: 'Too many attempts. Try again later.' }))
+          return
+        }
+
+        const body = await new Promise<string>((resolve) => {
+          let data = ''
+          req.on('data', (chunk: Buffer) => { data += chunk.toString() })
+          req.on('end', () => resolve(data))
+        })
+        const { password } = JSON.parse(body) as { password: string }
+        const valid = serverConfig?.passwordHash ? compareSync(password, serverConfig.passwordHash) : false
+
+        if (valid) {
+          clearFailedAttempts(clientIp)
+          const token = generateSessionToken()
+          sessionTokens.set(token, Date.now())
+          res.end(JSON.stringify({ valid: true, token }))
+        } else {
+          recordFailedAttempt(clientIp)
+          res.statusCode = 401
+          res.end(JSON.stringify({ valid: false }))
+        }
+        return
+      }
+
       // GET /api/axon/preflight — system health check for first-run setup
       if (url === '/api/axon/preflight') {
         const checks: { id: string; label: string; status: 'pass' | 'warn' | 'fail'; detail: string; action?: string; actionType?: string }[] = []
@@ -2156,9 +2324,22 @@ export function handleAxonUpgrade(
   req: IncomingMessage,
   socket: import('stream').Duplex,
   head: Buffer,
+  axonHome?: string,
 ) {
   const url = new URL(req.url || '', `http://${req.headers.host}`)
   if (url.pathname === '/api/axon/terminal/ws') {
+    // Auth check for remote WebSocket connections — uses session token (not password)
+    const remoteIp = req.socket.remoteAddress || ''
+    const isLocal = remoteIp === '127.0.0.1' || remoteIp === '::1' || remoteIp === '::ffff:127.0.0.1'
+    if (!isLocal) {
+      const token = url.searchParams.get('token') || ''
+      if (!token || !isValidSession(token)) {
+        console.error('[Axon WS] Rejected: invalid session')
+        socket.destroy()
+        return true
+      }
+    }
+
     const termId = url.searchParams.get('id')
     console.log(`[Axon WS] Upgrade request: termId=${termId} hasTerminal=${termId ? hasTerminal(termId) : 'N/A'}`)
     if (!termId || !hasTerminal(termId)) {

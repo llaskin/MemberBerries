@@ -33,6 +33,7 @@ export default defineConfig({
   clearScreen: false,
   server: {
     port: 1420,
+    host: process.env.VITE_HOST || 'localhost',
     strictPort: true,
   },
   optimizeDeps: {

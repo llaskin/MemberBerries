@@ -17,6 +17,8 @@ import { AboutView } from '@/views/AboutView'
 import { GenesisProgressView } from '@/views/GenesisProgressView'
 import { IntroSplash } from '@/components/shared/IntroSplash'
 import { PreflightCheck } from '@/components/shared/PreflightCheck'
+import { AuthOverlay } from '@/components/shared/AuthOverlay'
+import { setAuthHandler } from '@/lib/apiClient'
 import { useUIStore, type ViewId } from '@/store/uiStore'
 import { useProjectStore } from '@/store/projectStore'
 
@@ -213,6 +215,28 @@ function ViewRouter() {
   )
 }
 
+/* ── Auth gate for remote connections ──────────────────────────── */
+
+function AuthGate() {
+  const [needsAuth, setNeedsAuth] = useState(false)
+
+  useEffect(() => {
+    setAuthHandler(() => setNeedsAuth(true))
+    return () => setAuthHandler(() => {})
+  }, [])
+
+  return (
+    <AuthOverlay
+      visible={needsAuth}
+      onAuthenticated={() => {
+        setNeedsAuth(false)
+        // Reload data after authenticating
+        window.location.reload()
+      }}
+    />
+  )
+}
+
 export default function App() {
   return (
     <DataProvider>
@@ -221,6 +245,7 @@ export default function App() {
       </Shell>
       <IntroSplash />
       <PreflightCheck />
+      <AuthGate />
     </DataProvider>
   )
 }
