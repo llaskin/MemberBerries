@@ -26,6 +26,8 @@ echo ""
 # Initialize git in AXON_HOME if first project
 if [[ ! -d "$AXON_HOME/.git" ]]; then
     echo "First project — initializing Axon home..."
+    # Ensure AXON_HOME exists before git init
+    mkdir -p "$AXON_HOME"
     if [[ -t 0 ]]; then
         # Interactive — ask the user
         read -p "  Version your Axon memory with git? [Y/n] " -n 1 -r REPLY
