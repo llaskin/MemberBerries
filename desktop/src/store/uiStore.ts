@@ -57,24 +57,32 @@ export const useUIStore = create<UIStore>((set) => ({
     localStorage.setItem('ax-theme', next)
     return { theme: next }
   }),
-  setView: (view) => set(s => ({
-    activeView: view,
-    previousView: s.activeView,
-    viewSwipeDirection: getSwipeDir(s.activeView, view),
-    selectedRollup: null,
-  })),
+  setView: (view) => set(s => {
+    if (view === s.activeView) return s // no-op guard
+    return {
+      activeView: view,
+      previousView: s.activeView,
+      viewSwipeDirection: getSwipeDir(s.activeView, view),
+      selectedRollup: null,
+    }
+  }),
   openRollup: (filename) => set(s => ({
     activeView: 'rollup-detail',
     previousView: s.activeView,
     viewSwipeDirection: getSwipeDir(s.activeView, 'rollup-detail'),
     selectedRollup: filename,
   })),
-  goBack: () => set(s => ({
-    activeView: 'timeline',
-    previousView: s.activeView,
-    viewSwipeDirection: getSwipeDir(s.activeView, 'timeline'),
-    selectedRollup: null,
-  })),
+  goBack: () => set(s => {
+    // Go back to previousView if it's a strip view, otherwise timeline
+    const STRIP_VIEWS = new Set<ViewId>(['morning', 'agents', 'timeline', 'source', 'todos', 'terminal', 'settings'])
+    const target = s.previousView && STRIP_VIEWS.has(s.previousView) ? s.previousView : 'timeline'
+    return {
+      activeView: target,
+      previousView: s.activeView,
+      viewSwipeDirection: getSwipeDir(s.activeView, target),
+      selectedRollup: null,
+    }
+  }),
   openTerminal: (sessionId) => set(s => ({
     activeView: 'terminal',
     previousView: s.activeView,

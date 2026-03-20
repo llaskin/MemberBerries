@@ -290,9 +290,11 @@ body {
 }
 .animate-slide-right {
   animation: slideInFromRight 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, filter;
 }
 .animate-slide-left {
   animation: slideInFromLeft 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, filter;
 }
 
 /* View exit transitions — paired with entry for cross-zone feel */

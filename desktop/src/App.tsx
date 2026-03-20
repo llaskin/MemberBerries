@@ -62,6 +62,7 @@ function StripPane({
       style={{
         transform: `translateX(${offsetPercent}%)`,
         transition: 'transform 300ms ease-out',
+        willChange: 'transform',
       }}
     >
       <div className={FULL_BLEED.has(viewId as ViewId) ? 'h-full' : 'max-w-3xl mx-auto px-8 py-10 overflow-y-auto h-full'}>
