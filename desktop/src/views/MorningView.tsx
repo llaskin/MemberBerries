@@ -21,12 +21,6 @@ type SessionStatus = 'idle' | 'loading-context' | 'connecting' | 'streaming' | '
 
 type ThinkingPhase = 'gathering' | 'reading' | 'sending' | 'thinking'
 
-// ─── Tauri shell integration ─────────────────────────────────────
-
-function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-}
-
 // ─── Component ───────────────────────────────────────────────────
 
 export function MorningView() {
@@ -156,53 +150,8 @@ export function MorningView() {
       setThinkingPhase('sending')
       setStatus('connecting')
 
-      if (isTauri()) {
-        // Spawn claude via Tauri shell
-        const { Command } = await import('@tauri-apps/plugin-shell')
-
-        setThinkingPhase('thinking')
-        setStatus('streaming')
-
-        const command = Command.create('claude', ['-p', prompt, '--allowedTools', 'Read,Glob,Grep'])
-        let buffer = ''
-
-        command.stdout.on('data', (data: string) => {
-          buffer += data
-          // First chunk arrives — create the message bubble
-          setMessages(prev => {
-            const existing = prev.find(m => m.id === 'assistant-briefing')
-            if (existing) return prev.map(m => m.id === 'assistant-briefing' ? { ...m, content: buffer } : m)
-            return [...prev, { id: 'assistant-briefing', role: 'assistant' as const, content: buffer, timestamp: new Date(), streaming: true }]
-          })
-        })
-
-        command.stderr.on('data', (data: string) => {
-          // Claude CLI progress output — ignore
-          console.debug('[claude stderr]', data)
-        })
-
-        command.on('close', (data: { code: number | null }) => {
-          setMessages(prev =>
-            prev.map(m => m.id === 'assistant-briefing' ? { ...m, streaming: false } : m)
-          )
-          if (data.code !== 0 && buffer.length === 0) {
-            setError('Claude exited with an error. Check that the claude CLI is installed.')
-          }
-          setStatus('ready')
-          childRef.current = null
-        })
-
-        command.on('error', (err: string) => {
-          setError(`Failed to start Claude: ${err}`)
-          setStatus('error')
-          childRef.current = null
-        })
-
-        const child = await command.spawn()
-        childRef.current = child
-
-      } else {
-        // Dev mode — stream via Vite SSE proxy
+      {
+        // Stream via SSE proxy
         setThinkingPhase('thinking')
         setStatus('streaming')
 
@@ -277,43 +226,8 @@ export function MorningView() {
     setInput('')
     setStatus('streaming')
 
-    if (isTauri()) {
-      const { Command } = await import('@tauri-apps/plugin-shell')
-
-      const responseId = `assistant-${Date.now()}`
-      setMessages(prev => [
-        ...prev,
-        { id: responseId, role: 'assistant', content: '', timestamp: new Date(), streaming: true },
-      ])
-
-      const command = Command.create('claude', [
-        '--continue', '-p', userMsg.content,
-        '--allowedTools', 'Read,Glob,Grep',
-      ])
-
-      let buffer = ''
-
-      command.stdout.on('data', (data: string) => {
-        buffer += data
-        setMessages(prev =>
-          prev.map(m => m.id === responseId ? { ...m, content: buffer } : m)
-        )
-      })
-
-      command.on('close', () => {
-        setMessages(prev =>
-          prev.map(m => m.id === responseId ? { ...m, streaming: false } : m)
-        )
-        setStatus('ready')
-      })
-
-      command.on('error', () => {
-        setStatus('ready')
-      })
-
-      await command.spawn()
-    } else {
-      // Dev mode — stream via Vite SSE proxy
+    {
+      // Stream via SSE proxy
       const responseId = `assistant-${Date.now()}`
       setMessages(prev => [
         ...prev,

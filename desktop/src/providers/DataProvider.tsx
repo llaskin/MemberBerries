@@ -20,11 +20,6 @@ export function useBackend(): Backend {
   return ctx
 }
 
-/** Detect if running inside Tauri native shell */
-function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-}
-
 function createFetchBackend(): Backend {
   return {
     async getProjects() {
@@ -74,50 +69,12 @@ function createFetchBackend(): Backend {
   }
 }
 
-async function createTauriBackend(): Promise<Backend> {
-  const { invoke } = await import('@tauri-apps/api/core')
-
-  return {
-    async getProjects() {
-      return invoke<Project[]>('list_projects')
-    },
-    async discoverRepos() {
-      return invoke<DiscoveredRepo[]>('discover_repos')
-    },
-    async initQuick(name: string, path: string) {
-      return invoke<{ name: string; status: string }>('init_quick', { name, path })
-    },
-    async getRollups(project: string) {
-      return invoke<Array<{ filename: string; content: string }>>('list_rollups', { project })
-    },
-    async getMornings(project: string) {
-      return invoke<Array<{ filename: string; content: string }>>('list_mornings', { project })
-    },
-    async getState(project: string) {
-      const result = await invoke<{ content: string }>('read_state', { project })
-      return result.content
-    },
-    async getConfig(project: string) {
-      const result = await invoke<{ content: string }>('read_config', { project })
-      return result.content
-    },
-    async getStream(project: string) {
-      const result = await invoke<{ content: string }>('read_stream', { project })
-      return result.content
-    },
-  }
-}
-
-// Singleton backend — resolved once on first use
-let backendPromise: Promise<Backend> | null = null
+// Singleton backend
+let backend: Backend | null = null
 
 function getBackend(): Promise<Backend> {
-  if (!backendPromise) {
-    backendPromise = isTauri()
-      ? createTauriBackend()
-      : Promise.resolve(createFetchBackend())
-  }
-  return backendPromise
+  if (!backend) backend = createFetchBackend()
+  return Promise.resolve(backend)
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
