@@ -10,7 +10,11 @@ export function ErrorToast() {
   const issueUrl = buildIssueUrl(toast)
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] max-w-sm animate-fade-in-up">
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-[100] sm:max-w-sm animate-fade-in-up"
+    >
       <div className="bg-ax-elevated rounded-xl border border-[var(--ax-error)]/30 shadow-[0_8px_30px_rgba(0,0,0,0.2)] overflow-hidden">
         <div className="flex items-start gap-3 px-4 py-3">
           <AlertTriangle size={16} className="text-[var(--ax-error)] shrink-0 mt-0.5" />
@@ -33,10 +37,10 @@ export function ErrorToast() {
           </div>
           <button
             onClick={dismiss}
-            className="text-ax-text-ghost hover:text-ax-text-secondary transition-colors shrink-0"
-            aria-label="Dismiss"
+            className="text-ax-text-ghost hover:text-ax-text-secondary transition-colors shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2 -mt-1"
+            aria-label="Dismiss error"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
       </div>

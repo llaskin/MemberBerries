@@ -169,7 +169,7 @@ export function PreflightCheck({ forceVisible, onDismiss }: { forceVisible?: boo
               <p className="font-mono text-micro text-ax-text-tertiary">{fetchError}</p>
             </div>
           ) : (
-            <div className="divide-y divide-ax-border-subtle">
+            <div className="divide-y divide-ax-border-subtle max-h-[50vh] overflow-y-auto">
               {checks.map(c => (
                 <div key={c.id} className="flex items-center gap-3 px-4 py-3">
                   {c.status === 'pass' && <Check size={14} className="text-[var(--ax-success)] shrink-0" />}

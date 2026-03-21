@@ -498,7 +498,7 @@ function TodoCard({ item, onUpdate }: {
         {/* Hover actions */}
         {item.status === 'active' && (
           <div className="absolute right-3 top-2.5 flex items-center gap-0.5
-            opacity-0 group-hover:opacity-100 transition-opacity duration-150
+            opacity-0 group-hover:opacity-100 touch-visible transition-opacity duration-150
             bg-ax-elevated/90 backdrop-blur-sm rounded-lg p-0.5 border border-ax-border-subtle shadow-sm">
             <button
               onClick={() => setEditing(true)}
@@ -560,7 +560,7 @@ function TodoCard({ item, onUpdate }: {
 
         {/* Reactivate for completed/deferred/dropped */}
         {(isCompleted || isInactive) && (
-          <div className="absolute right-3 top-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <div className="absolute right-3 top-2.5 opacity-0 group-hover:opacity-100 touch-visible transition-opacity duration-150">
             <button
               onClick={() => onUpdate(item.id, 'reactivate')}
               title="Reactivate"

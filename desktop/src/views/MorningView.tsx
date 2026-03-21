@@ -574,7 +574,7 @@ export function MorningView() {
               </div>
               <CanvasTerminal
                 terminalId={morningTerminalId}
-                width={600}
+                width={Math.min(window.innerWidth - 80, 600)}
                 height={280}
               />
             </div>

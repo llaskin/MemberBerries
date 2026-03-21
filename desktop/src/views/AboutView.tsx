@@ -58,7 +58,7 @@ function GitHubTab() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <a
             href={REPO_URL}
             target="_blank"
@@ -199,7 +199,7 @@ export function AboutView() {
         <p className="text-body text-ax-text-secondary">
           Developer memory system — protocol over platform
         </p>
-        <div className="flex items-center gap-3 mt-3">
+        <div className="flex items-center gap-3 mt-3 flex-wrap">
           <a
             href="https://x.com/RobMaye5"
             target="_blank"

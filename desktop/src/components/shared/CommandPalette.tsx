@@ -226,7 +226,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
       {/* Palette */}
       <div
-        className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg z-50 animate-fade-in"
+        className="fixed top-4 sm:top-[20%] left-2 right-2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full max-w-lg z-50 animate-fade-in"
         role="dialog"
         aria-label="Command palette"
         aria-modal="true"
@@ -253,7 +253,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           </div>
 
           {/* Results */}
-          <div ref={listRef} className="max-h-[400px] overflow-y-auto py-2" role="listbox">
+          <div ref={listRef} className="max-h-[40vh] sm:max-h-[400px] overflow-y-auto py-2" role="listbox">
             {allItems.length === 0 && !searching && hasQuery && (
               <div className="px-4 py-6 text-center text-small text-ax-text-tertiary">
                 No results for "{query}"
