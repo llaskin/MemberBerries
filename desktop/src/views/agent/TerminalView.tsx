@@ -94,6 +94,9 @@ export function TerminalView({
       cursorBlink: true,
       cursorStyle: 'bar' as const,
       theme,
+      smoothScrollDuration: 100,
+
+      scrollSensitivity: 3,
     })
 
     const fitAddon = new FitAddon()

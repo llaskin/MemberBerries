@@ -66,6 +66,9 @@ export function FullscreenTerminal({ terminalId, onClose }: Props) {
       cursorStyle: 'bar',
       allowTransparency: true,
       scrollback: 5000,
+      smoothScrollDuration: 100,
+
+      scrollSensitivity: 3,
     })
 
     const fit = new FitAddon()

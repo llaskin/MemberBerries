@@ -59,6 +59,9 @@ export function CanvasTerminal({ terminalId, width, height }: CanvasTerminalProp
       cursorBlink: true,
       cursorStyle: 'bar' as const,
       theme: resolveTerminalTheme(),
+      smoothScrollDuration: 100,
+
+      scrollSensitivity: 3,
     })
 
     const fitAddon = new FitAddon()
