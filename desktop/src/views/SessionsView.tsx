@@ -951,7 +951,7 @@ export function SessionsView() {
   }, [allSessions, agentFilter])
 
   return (
-    <div className="flex-1 flex flex-col min-w-0">
+    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       {/* Header bar */}
       <div className="shrink-0 flex items-center gap-2 px-4 py-1 border-b border-ax-border-subtle bg-ax-base">
         {/* View mode tabs (Day / Sessions / Analytics) */}
