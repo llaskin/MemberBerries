@@ -22,7 +22,7 @@ export function AuthOverlay({ visible, onAuthenticated }: AuthOverlayProps) {
     const token = getStoredToken()
     if (token) {
       // Probe a protected endpoint with the stored session token
-      fetch('/api/axon/projects', {
+      fetch('/api/mb/projects', {
         headers: { 'Authorization': `Bearer ${token}` },
       })
         .then(r => {
@@ -41,7 +41,7 @@ export function AuthOverlay({ visible, onAuthenticated }: AuthOverlayProps) {
     setError('')
 
     try {
-      const res = await fetch('/api/axon/server-config/login', {
+      const res = await fetch('/api/mb/server-config/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),

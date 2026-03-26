@@ -23,17 +23,17 @@ export function useBackend(): Backend {
 function createFetchBackend(): Backend {
   return {
     async getProjects() {
-      const res = await fetch('/api/axon/projects')
+      const res = await fetch('/api/mb/projects')
       if (!res.ok) throw new Error(`Failed to load projects (${res.status})`)
       return res.json()
     },
     async discoverRepos() {
-      const res = await fetch('/api/axon/discover-repos')
+      const res = await fetch('/api/mb/discover-repos')
       if (!res.ok) throw new Error(`Failed to discover repos (${res.status})`)
       return res.json()
     },
     async initQuick(name: string, path: string) {
-      const res = await fetch('/api/axon/init-quick', {
+      const res = await fetch('/api/mb/init-quick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectName: name, projectPath: path }),
@@ -42,27 +42,27 @@ function createFetchBackend(): Backend {
       return res.json()
     },
     async getRollups(project: string) {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/rollups`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/rollups`)
       if (!res.ok) throw new Error(`Failed to load rollups (${res.status})`)
       return res.json()
     },
     async getMornings(project: string) {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/mornings`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/mornings`)
       if (!res.ok) return []
       return res.json()
     },
     async getState(project: string) {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/state`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/state`)
       const data = await res.json()
       return data.content || ''
     },
     async getConfig(project: string) {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/config`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/config`)
       const data = await res.json()
       return data.content || ''
     },
     async getStream(project: string) {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/stream`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/stream`)
       const data = await res.json()
       return data.content || ''
     },

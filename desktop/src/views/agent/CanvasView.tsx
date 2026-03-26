@@ -145,7 +145,7 @@ export function CanvasView({
       if (attempts > maxAttempts) { clearInterval(poll); pollIntervalsRef.current.delete(poll); return }
       try {
         const res = await fetch(
-          `/api/axon/sessions?project=${encodeURIComponent(activeProject)}&forceIndex=true`
+          `/api/mb/sessions?project=${encodeURIComponent(activeProject)}&forceIndex=true`
         )
         if (unmountedRef.current) return
         const data = await res.json()
@@ -233,7 +233,7 @@ export function CanvasView({
     // Optimistic update — show new name immediately
     setNicknameOverrides(prev => new Map(prev).set(sessionId, trimmed))
     try {
-      await fetch(`/api/axon/sessions/${encodeURIComponent(sessionId)}/meta`, {
+      await fetch(`/api/mb/sessions/${encodeURIComponent(sessionId)}/meta`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nickname: trimmed }),

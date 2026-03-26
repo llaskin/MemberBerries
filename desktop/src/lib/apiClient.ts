@@ -22,7 +22,7 @@ export function clearStoredToken() {
 
 /**
  * Install a global fetch interceptor that injects auth headers on all
- * /api/axon/* requests. Call this ONCE at app startup (App.tsx).
+ * /api/mb/* requests. Call this ONCE at app startup (App.tsx).
  * This avoids having to replace 50+ fetch() call sites across 17 files.
  */
 export function installAuthInterceptor() {
@@ -32,7 +32,7 @@ export function installAuthInterceptor() {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url
 
     // Inject auth header for Axon API calls (but not login/config endpoints)
-    if (url.startsWith('/api/axon') && !url.includes('server-config/login')) {
+    if (url.startsWith('/api/mb') && !url.includes('server-config/login')) {
       const token = getStoredToken()
       if (token) {
         const headers = new Headers(init?.headers)
@@ -46,7 +46,7 @@ export function installAuthInterceptor() {
       res = await originalFetch(input, init as RequestInit)
     } catch (err) {
       // Network error (server down, no connectivity)
-      if (url.startsWith('/api/axon')) {
+      if (url.startsWith('/api/mb')) {
         const { useErrorStore } = await import('@/store/errorStore')
         useErrorStore.getState().showError('Server unreachable', { source: 'network', detail: url })
       }
@@ -54,12 +54,12 @@ export function installAuthInterceptor() {
     }
 
     // On 401, trigger auth overlay (not for login/config endpoints)
-    if (res.status === 401 && url.startsWith('/api/axon') && !url.includes('/login') && !url.includes('server-config')) {
+    if (res.status === 401 && url.startsWith('/api/mb') && !url.includes('/login') && !url.includes('server-config')) {
       onAuthRequired?.()
     }
 
     // Surface server errors (5xx)
-    if (res.status >= 500 && url.startsWith('/api/axon')) {
+    if (res.status >= 500 && url.startsWith('/api/mb')) {
       const { useErrorStore } = await import('@/store/errorStore')
       useErrorStore.getState().showError(`Server error (${res.status})`, { source: 'server', detail: url })
     }

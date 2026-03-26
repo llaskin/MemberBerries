@@ -70,7 +70,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   canvasExpanded: {} as Record<string, 'expanded' | 'minimized'>,
 
   spawn: async (project, sessionId) => {
-    const res = await fetch('/api/axon/terminal/spawn', {
+    const res = await fetch('/api/mb/terminal/spawn', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ project, sessionId: sessionId || null }),
@@ -98,7 +98,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
     const token = getStoredToken()
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
-    const ws = new WebSocket(`${protocol}//${location.host}/api/axon/terminal/ws?id=${terminalId}${tokenParam}`)
+    const ws = new WebSocket(`${protocol}//${location.host}/api/mb/terminal/ws?id=${terminalId}${tokenParam}`)
     int.ws = ws
 
     ws.onopen = () => {
@@ -190,7 +190,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       internals.delete(terminalId)
     }
     // Kill PTY on backend
-    fetch(`/api/axon/terminal/${terminalId}`, { method: 'DELETE' }).catch(() => {})
+    fetch(`/api/mb/terminal/${terminalId}`, { method: 'DELETE' }).catch(() => {})
     // Remove from state
     set(s => {
       const { [terminalId]: _, ...rest } = s.terminals
@@ -214,7 +214,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       // Cleanup WebSocket + PTY (side effects only, no state update)
       const int = internals.get(termId)
       if (int) { int.ws?.close(); int.ws = null; int.dataListeners.clear(); internals.delete(termId) }
-      fetch(`/api/axon/terminal/${termId}`, { method: 'DELETE' }).catch(() => {})
+      fetch(`/api/mb/terminal/${termId}`, { method: 'DELETE' }).catch(() => {})
     }
     // Single atomic state update
     set(s => {
@@ -264,7 +264,7 @@ if (typeof document !== 'undefined') {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
       const token = getStoredToken()
       const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
-      const ws = new WebSocket(`${protocol}//${location.host}/api/axon/terminal/ws?id=${terminalId}${tokenParam}`)
+      const ws = new WebSocket(`${protocol}//${location.host}/api/mb/terminal/ws?id=${terminalId}${tokenParam}`)
       int.ws = ws
 
       ws.onopen = () => {

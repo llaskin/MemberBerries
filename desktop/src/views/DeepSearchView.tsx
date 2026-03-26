@@ -265,7 +265,7 @@ export function DeepSearchView() {
     abortRef.current = controller
 
     try {
-      const res = await fetch('/api/axon/search/deep', {
+      const res = await fetch('/api/mb/search/deep', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, continueSession: hasSession }),

@@ -80,7 +80,7 @@ export function FileTree({ project, onFileReference }: { project: string; onFile
 
   const loadDir = useCallback(async (path: string) => {
     try {
-      const url = `/api/axon/filetree?project=${encodeURIComponent(project)}${path ? `&path=${encodeURIComponent(path)}` : ''}`
+      const url = `/api/mb/filetree?project=${encodeURIComponent(project)}${path ? `&path=${encodeURIComponent(path)}` : ''}`
       const res = await fetch(url)
       const data = await res.json() as { root: string; items: FileEntry[] }
       if (!path) setRoot(data.root)
@@ -94,7 +94,7 @@ export function FileTree({ project, onFileReference }: { project: string; onFile
 
   const loadGitStatus = useCallback(async () => {
     try {
-      const res = await fetch(`/api/axon/gitstatus?project=${encodeURIComponent(project)}`)
+      const res = await fetch(`/api/mb/gitstatus?project=${encodeURIComponent(project)}`)
       const data = await res.json() as { files: GitMap }
       setGitFiles(data.files)
     } catch { setGitFiles({}) }

@@ -30,7 +30,7 @@ export function useFileSearch(query: string, project: string | null): {
       abortRef.current = controller
 
       fetch(
-        `/api/axon/filesearch?project=${encodeURIComponent(project)}&q=${encodeURIComponent(query)}`,
+        `/api/mb/filesearch?project=${encodeURIComponent(project)}&q=${encodeURIComponent(query)}`,
         { signal: controller.signal }
       )
         .then(r => r.json())

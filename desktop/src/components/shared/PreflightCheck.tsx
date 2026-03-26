@@ -67,7 +67,7 @@ export function PreflightCheck({ forceVisible, onDismiss }: { forceVisible?: boo
     setLoading(true)
     setFetchError(null)
     try {
-      const res = await fetch('/api/axon/preflight')
+      const res = await fetch('/api/mb/preflight')
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       const data = await res.json()
       setChecks(data.checks || [])
@@ -103,7 +103,7 @@ export function PreflightCheck({ forceVisible, onDismiss }: { forceVisible?: boo
     if (item.actionType === 'install-cli' || item.actionType === 'update-cli') {
       setActionRunning(item.id)
       try {
-        const res = await fetch('/api/axon/preflight/action', {
+        const res = await fetch('/api/mb/preflight/action', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ actionType: item.actionType }),

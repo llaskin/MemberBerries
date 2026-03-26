@@ -163,7 +163,7 @@ function writeServerConfig(axonHome: string, cfg: ServerConfig) {
 
 /* ── Session token store (in-memory, survives hot reloads via module scope) ── */
 const sessionTokens = new Map<string, number>() // token → created timestamp
-let activeDeepSearches = 0 // concurrency cap for /api/axon/search/deep
+let activeDeepSearches = 0 // concurrency cap for /api/mb/search/deep
 const SESSION_TTL = 24 * 60 * 60 * 1000 // 24 hours
 const failedAttempts = new Map<string, { count: number; lastAttempt: number }>()
 
@@ -215,7 +215,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
   return async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     const url = req.url || ''
-    if (!url.startsWith('/api/axon')) return next()
+    if (!url.startsWith('/api/mb')) return next()
 
     res.setHeader('Content-Type', 'application/json')
 
@@ -226,7 +226,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
     // Default-deny remote connections unless auth passes
     if (!isLocal) {
       // Allow server-config GET (needed for UI to check state) and login endpoint
-      const isPublicEndpoint = url === '/api/axon/server-config' || url === '/api/axon/server-config/login'
+      const isPublicEndpoint = url === '/api/mb/server-config' || url === '/api/mb/server-config/login'
       if (!isPublicEndpoint) {
         const authHeader = req.headers.authorization || ''
         const token = authHeader.replace(/^Bearer\s+/i, '').trim()
@@ -246,8 +246,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
     }
 
     try {
-      // GET /api/axon/server-config — remote access configuration (public, no secrets)
-      if (url === '/api/axon/server-config' && req.method === 'GET') {
+      // GET /api/mb/server-config — remote access configuration (public, no secrets)
+      if (url === '/api/mb/server-config' && req.method === 'GET') {
         serverConfig = readServerConfig(AXON_HOME)
         res.end(JSON.stringify({
           enabled: serverConfig?.enabled || false,
@@ -257,8 +257,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/server-config — update remote access settings (local only)
-      if (url === '/api/axon/server-config' && req.method === 'POST') {
+      // POST /api/mb/server-config — update remote access settings (local only)
+      if (url === '/api/mb/server-config' && req.method === 'POST') {
         if (!isLocal) {
           res.statusCode = 403
           res.end(JSON.stringify({ error: 'Server config can only be changed locally' }))
@@ -300,8 +300,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/server-config/login — verify password, return session token
-      if (url === '/api/axon/server-config/login' && req.method === 'POST') {
+      // POST /api/mb/server-config/login — verify password, return session token
+      if (url === '/api/mb/server-config/login' && req.method === 'POST') {
         const clientIp = req.socket.remoteAddress || 'unknown'
 
         // Rate limiting
@@ -332,8 +332,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/preflight — system health check for first-run setup
-      if (url === '/api/axon/preflight') {
+      // GET /api/mb/preflight — system health check for first-run setup
+      if (url === '/api/mb/preflight') {
         const checks: { id: string; label: string; status: 'pass' | 'warn' | 'fail'; detail: string; action?: string; actionType?: string }[] = []
 
         const shellPath = resolvedShellPath
@@ -469,8 +469,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/preflight/action — execute a preflight fix action
-      if (url === '/api/axon/preflight/action' && req.method === 'POST') {
+      // POST /api/mb/preflight/action — execute a preflight fix action
+      if (url === '/api/mb/preflight/action' && req.method === 'POST') {
         const body = await new Promise<string>((resolve) => {
           let data = ''
           req.on('data', (chunk: Buffer) => { data += chunk.toString() })
@@ -528,8 +528,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects
-      if (url === '/api/axon/projects') {
+      // GET /api/mb/projects
+      if (url === '/api/mb/projects') {
         const wsDir = join(AXON_HOME, 'workspaces')
         if (!existsSync(wsDir)) {
           res.end(JSON.stringify([]))
@@ -595,7 +595,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/rollups
+      // GET /api/mb/projects/:name/rollups
       const rollupsMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/rollups$/)
       if (rollupsMatch) {
         const project = decodeURIComponent(rollupsMatch[1])
@@ -617,7 +617,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/state
+      // GET /api/mb/projects/:name/state
       const stateMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/state$/)
       if (stateMatch) {
         const project = decodeURIComponent(stateMatch[1])
@@ -630,7 +630,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/config
+      // GET /api/mb/projects/:name/config
       const configMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/config$/)
       if (configMatch && req.method === 'GET') {
         const project = decodeURIComponent(configMatch[1])
@@ -643,7 +643,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // PATCH /api/axon/projects/:name/config
+      // PATCH /api/mb/projects/:name/config
       if (configMatch && req.method === 'PATCH') {
         const project = decodeURIComponent(configMatch[1])
         const configPath = join(AXON_HOME, 'workspaces', project, 'config.yaml')
@@ -698,7 +698,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // DELETE /api/axon/projects/:name?mode=archive|delete
+      // DELETE /api/mb/projects/:name?mode=archive|delete
       const deleteMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)(?:\?|$)/)
       if (deleteMatch && req.method === 'DELETE') {
         const project = decodeURIComponent(deleteMatch[1])
@@ -737,7 +737,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/stream
+      // GET /api/mb/projects/:name/stream
       const streamMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/stream$/)
       if (streamMatch) {
         const project = decodeURIComponent(streamMatch[1])
@@ -750,7 +750,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/mornings
+      // GET /api/mb/projects/:name/mornings
       const morningsMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/mornings$/)
       if (morningsMatch) {
         const project = decodeURIComponent(morningsMatch[1])
@@ -770,7 +770,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/gource — serve gource.png if it exists
+      // GET /api/mb/projects/:name/gource — serve gource.png if it exists
       const gourceMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/gource$/)
       if (gourceMatch) {
         const project = decodeURIComponent(gourceMatch[1])
@@ -789,7 +789,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
       // ── TODO ENDPOINTS (SQLite-backed via todoDb.ts) ────────
 
-      // GET /api/axon/projects/:name/todos
+      // GET /api/mb/projects/:name/todos
       const todosGetMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/todos$/)
       if (todosGetMatch && req.method === 'GET') {
         const project = decodeURIComponent(todosGetMatch[1])
@@ -805,7 +805,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/projects/:name/todos — add item
+      // POST /api/mb/projects/:name/todos — add item
       const todosPostMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/todos$/)
       if (todosPostMatch && req.method === 'POST') {
         const project = decodeURIComponent(todosPostMatch[1])
@@ -822,7 +822,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // PATCH /api/axon/projects/:name/todos/:id — update item
+      // PATCH /api/mb/projects/:name/todos/:id — update item
       const todosPatchMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/todos\/(\d+)$/)
       if (todosPatchMatch && req.method === 'PATCH') {
         const project = decodeURIComponent(todosPatchMatch[1])
@@ -865,7 +865,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
       // ── JOBS ENDPOINTS (SQLite-backed via jobsDb.ts) ─────
 
-      // GET /api/axon/projects/:name/jobs
+      // GET /api/mb/projects/:name/jobs
       const jobsGetMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/jobs(\?.*)?$/)
       if (jobsGetMatch && req.method === 'GET') {
         const project = decodeURIComponent(jobsGetMatch[1])
@@ -888,7 +888,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/jobs/summary
+      // GET /api/mb/projects/:name/jobs/summary
       const jobsSummaryMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/jobs\/summary(\?.*)?$/)
       if (jobsSummaryMatch && req.method === 'GET') {
         const project = decodeURIComponent(jobsSummaryMatch[1])
@@ -907,7 +907,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/cron — cron/launchd status
+      // GET /api/mb/projects/:name/cron — cron/launchd status
       const cronMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/cron$/)
       if (cronMatch && req.method === 'GET') {
         const project = decodeURIComponent(cronMatch[1])
@@ -938,7 +938,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/projects/:name/cron — install/remove cron
+      // POST /api/mb/projects/:name/cron — install/remove cron
       const cronPostMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/cron$/)
       if (cronPostMatch && req.method === 'POST') {
         const project = decodeURIComponent(cronPostMatch[1])
@@ -978,7 +978,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/jobs/:id/watch — SSE live feed of a running job's Claude session
+      // GET /api/mb/projects/:name/jobs/:id/watch — SSE live feed of a running job's Claude session
       const jobWatchMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/jobs\/(\d+)\/watch$/)
       if (jobWatchMatch && req.method === 'GET') {
         const project = decodeURIComponent(jobWatchMatch[1])
@@ -1084,8 +1084,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/chat — streaming Claude proxy
-      if (url === '/api/axon/chat' && req.method === 'POST') {
+      // POST /api/mb/chat — streaming Claude proxy
+      if (url === '/api/mb/chat' && req.method === 'POST') {
         const body = await new Promise<string>((resolve) => {
           let data = ''
           req.on('data', (chunk: Buffer) => { data += chunk.toString() })
@@ -1144,8 +1144,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/search/deep — AI-powered semantic search across sessions
-      if (url === '/api/axon/search/deep' && req.method === 'POST') {
+      // POST /api/mb/search/deep — AI-powered semantic search across sessions
+      if (url === '/api/mb/search/deep' && req.method === 'POST') {
         const body = await new Promise<string>((resolve) => {
           let data = ''
           req.on('data', (chunk: Buffer) => { data += chunk.toString() })
@@ -1295,8 +1295,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/agent — streaming Claude agent with tool visibility
-      if (url === '/api/axon/agent' && req.method === 'POST') {
+      // POST /api/mb/agent — streaming Claude agent with tool visibility
+      if (url === '/api/mb/agent' && req.method === 'POST') {
         const body = await new Promise<string>((resolve) => {
           let data = ''
           req.on('data', (chunk: Buffer) => { data += chunk.toString() })
@@ -1403,7 +1403,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/filesearch?project=name&q=query
+      // GET /api/mb/filesearch?project=name&q=query
       const filesearchMatch = url.match(/^\/api\/axon\/filesearch\?project=([^&]+)&q=(.*)$/)
       if (filesearchMatch) {
         const project = decodeURIComponent(filesearchMatch[1])
@@ -1435,7 +1435,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/filetree?project=name
+      // GET /api/mb/filetree?project=name
       const filetreeMatch = url.match(/^\/api\/axon\/filetree\?project=([^&]+)(?:&path=(.*))?$/)
       if (filetreeMatch) {
         const project = decodeURIComponent(filetreeMatch[1])
@@ -1475,7 +1475,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/gitstatus?project=name
+      // GET /api/mb/gitstatus?project=name
       const gitstatusMatch = url.match(/^\/api\/axon\/gitstatus\?project=([^&]+)$/)
       if (gitstatusMatch) {
         const project = decodeURIComponent(gitstatusMatch[1])
@@ -1522,8 +1522,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/scaffold — create a new git repo from scratch
-      if (url === '/api/axon/scaffold' && req.method === 'POST') {
+      // POST /api/mb/scaffold — create a new git repo from scratch
+      if (url === '/api/mb/scaffold' && req.method === 'POST') {
         let body = ''
         req.on('data', (c: Buffer) => { body += c.toString() })
         req.on('end', () => {
@@ -1566,8 +1566,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/discover-repos
-      if (url === '/api/axon/discover-repos') {
+      // GET /api/mb/discover-repos
+      if (url === '/api/mb/discover-repos') {
         // Return cached results if fresh
         if (discoveryCache && Date.now() - discoveryCache.timestamp < DISCOVERY_CACHE_TTL) {
           res.end(JSON.stringify(discoveryCache.repos))
@@ -1656,8 +1656,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/context-status
-      if (url === '/api/axon/context-status') {
+      // GET /api/mb/context-status
+      if (url === '/api/mb/context-status') {
         const axonGit = join(AXON_HOME, '.git')
         const initialized = existsSync(axonGit)
 
@@ -1744,7 +1744,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
       // --- Git Endpoints ---
 
-      // GET /api/axon/projects/:name/git/info
+      // GET /api/mb/projects/:name/git/info
       const gitInfoMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/info$/)
       if (gitInfoMatch) {
         const project = decodeURIComponent(gitInfoMatch[1])
@@ -1789,7 +1789,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/git/log?limit=50
+      // GET /api/mb/projects/:name/git/log?limit=50
       const gitLogMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/log(\?.*)?$/)
       if (gitLogMatch && req.method === 'GET') {
         const project = decodeURIComponent(gitLogMatch[1])
@@ -1822,7 +1822,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/git/branches
+      // GET /api/mb/projects/:name/git/branches
       const gitBranchesMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/branches$/)
       if (gitBranchesMatch) {
         const project = decodeURIComponent(gitBranchesMatch[1])
@@ -1849,7 +1849,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/projects/:name/git/tags
+      // GET /api/mb/projects/:name/git/tags
       const gitTagsMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/tags$/)
       if (gitTagsMatch) {
         const project = decodeURIComponent(gitTagsMatch[1])
@@ -1877,7 +1877,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/projects/:name/git/tag — create and push a tag
+      // POST /api/mb/projects/:name/git/tag — create and push a tag
       const gitTagCreateMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/tag$/)
       if (gitTagCreateMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitTagCreateMatch[1])
@@ -1918,7 +1918,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/projects/:name/git/push
+      // POST /api/mb/projects/:name/git/push
       const gitPushMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/push$/)
       if (gitPushMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitPushMatch[1])
@@ -1947,7 +1947,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/projects/:name/git/pull
+      // POST /api/mb/projects/:name/git/pull
       const gitPullMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/pull$/)
       if (gitPullMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitPullMatch[1])
@@ -1968,7 +1968,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/projects/:name/git/checkout
+      // POST /api/mb/projects/:name/git/checkout
       const gitCheckoutMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/checkout$/)
       if (gitCheckoutMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitCheckoutMatch[1])
@@ -2006,7 +2006,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
       // Terminal endpoints removed for security — no shell spawning
 
-      // PATCH /api/axon/sessions/:id/meta
+      // PATCH /api/mb/sessions/:id/meta
       const metaPatchMatch = url.match(/^\/api\/axon\/sessions\/([^/?]+)\/meta$/)
       if (metaPatchMatch && req.method === 'PATCH') {
         const sessionId = decodeURIComponent(metaPatchMatch[1])
@@ -2034,7 +2034,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       let resolvedProjectPath: string | null = null
       let resolvedProjectName: string | null = null
       const urlProjectParam = url.match(/[?&]project=([^&]+)/)
-      if (urlProjectParam && url.startsWith('/api/axon/sessions')) {
+      if (urlProjectParam && url.startsWith('/api/mb/sessions')) {
         const rawName = decodeURIComponent(urlProjectParam[1])
         resolvedProjectName = rawName
         try {
@@ -2049,7 +2049,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         } catch { /* fall back to raw name */ }
       }
 
-      if (url.startsWith('/api/axon/sessions') && (forceIndex || Date.now() - lastSessionIndex > 30_000)) {
+      if (url.startsWith('/api/mb/sessions') && (forceIndex || Date.now() - lastSessionIndex > 30_000)) {
         lastSessionIndex = Date.now()
         try {
           if (forceIndex && resolvedProjectPath) {
@@ -2089,8 +2089,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         }
       }
 
-      // GET /api/axon/sessions/installed-agents
-      if (url === '/api/axon/sessions/installed-agents') {
+      // GET /api/mb/sessions/installed-agents
+      if (url === '/api/mb/sessions/installed-agents') {
         try {
           const { registerAdapter, getInstalledAgents } = await import('../lib/agents/registry')
           const { claudeAdapter } = await import('../lib/agents/claude')
@@ -2108,8 +2108,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/sessions/analytics?since=ISO8601
-      if (url.startsWith('/api/axon/sessions/analytics')) {
+      // GET /api/mb/sessions/analytics?since=ISO8601
+      if (url.startsWith('/api/mb/sessions/analytics')) {
         try {
           const sinceParam = new URL(url, 'http://localhost').searchParams.get('since')
           const { getAnalytics } = await import('../lib/sessionDb')
@@ -2122,8 +2122,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/sessions/status
-      if (url === '/api/axon/sessions/status') {
+      // GET /api/mb/sessions/status
+      if (url === '/api/mb/sessions/status') {
         try {
           const { getIndexStatus } = await import('../lib/sessionDb')
           res.end(JSON.stringify(getIndexStatus()))
@@ -2133,7 +2133,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/sessions/search?q={query}
+      // GET /api/mb/sessions/search?q={query}
       const sessionSearchMatch = url.match(/^\/api\/axon\/sessions\/search\?q=(.+)$/)
       if (sessionSearchMatch) {
         const query = decodeURIComponent(sessionSearchMatch[1])
@@ -2155,7 +2155,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/sessions/{id}/prompts — prompt timeline from history.jsonl
+      // GET /api/mb/sessions/{id}/prompts — prompt timeline from history.jsonl
       const promptsMatch = url.match(/^\/api\/axon\/sessions\/([0-9a-f-]{36})\/prompts$/)
       if (promptsMatch) {
         const sessionId = promptsMatch[1]
@@ -2176,8 +2176,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/sessions/by-project — sessions grouped by project
-      if (url === '/api/axon/sessions/by-project') {
+      // GET /api/mb/sessions/by-project — sessions grouped by project
+      if (url === '/api/mb/sessions/by-project') {
         try {
           const { getSessions } = await import('../lib/sessionDb')
           const { getAllSessionMeta } = await import('../lib/sessionMeta')
@@ -2226,7 +2226,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/sessions/{id}
+      // GET /api/mb/sessions/{id}
       const sessionDetailMatch = url.match(/^\/api\/axon\/sessions\/([0-9a-f-]{36})$/)
       if (sessionDetailMatch) {
         const id = sessionDetailMatch[1]
@@ -2249,7 +2249,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/sessions?project={name}
+      // GET /api/mb/sessions?project={name}
       const sessionsMatch = url.match(/^\/api\/axon\/sessions(\?|&|$)/)
       if (sessionsMatch) {
         // Parse query params
@@ -2274,8 +2274,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/init-quick — create workspace + run genesis in background
-      if (url === '/api/axon/init-quick' && req.method === 'POST') {
+      // POST /api/mb/init-quick — create workspace + run genesis in background
+      if (url === '/api/mb/init-quick' && req.method === 'POST') {
         const body = await new Promise<string>((resolve) => {
           let data = ''
           req.on('data', (chunk: Buffer) => { data += chunk.toString() })
@@ -2413,8 +2413,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/axon/init-status?project=name
-      if (url.startsWith('/api/axon/init-status')) {
+      // GET /api/mb/init-status?project=name
+      if (url.startsWith('/api/mb/init-status')) {
         const params = new URL(url, 'http://localhost').searchParams
         const project = params.get('project')
         if (!project) {
@@ -2456,8 +2456,8 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // POST /api/axon/init — SSE streaming project init
-      if (url === '/api/axon/init' && req.method === 'POST') {
+      // POST /api/mb/init — SSE streaming project init
+      if (url === '/api/mb/init' && req.method === 'POST') {
         const body = await new Promise<string>((resolve) => {
           let data = ''
           req.on('data', (chunk: Buffer) => { data += chunk.toString() })
@@ -2560,7 +2560,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
           req.on('close', () => {
             // Don't kill the child — let genesis complete in background
-            // Client can poll /api/axon/init-status to check completion
+            // Client can poll /api/mb/init-status to check completion
             clientConnected = false
             child.unref()
             resolveInit()

@@ -63,7 +63,7 @@ export function useAgentSession() {
     abortRef.current = controller
 
     try {
-      const res = await fetch('/api/axon/agent', {
+      const res = await fetch('/api/mb/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

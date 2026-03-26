@@ -71,7 +71,7 @@ function useGitData(project: string | null) {
   const fetchInfo = useCallback(async () => {
     if (!project) { setInfo(null); return }
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/git/info`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/git/info`)
       setInfo(await res.json())
     } catch { setInfo(null) }
   }, [project])
@@ -79,7 +79,7 @@ function useGitData(project: string | null) {
   const fetchLog = useCallback(async () => {
     if (!project) { setCommits([]); return }
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/git/log?limit=50`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/git/log?limit=50`)
       const data = await res.json()
       setCommits(data.commits || [])
     } catch { setCommits([]) }
@@ -88,7 +88,7 @@ function useGitData(project: string | null) {
   const fetchBranches = useCallback(async () => {
     if (!project) { setBranches([]); return }
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/git/branches`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/git/branches`)
       const data = await res.json()
       setBranches(data.branches || [])
     } catch { setBranches([]) }
@@ -97,7 +97,7 @@ function useGitData(project: string | null) {
   const fetchTags = useCallback(async () => {
     if (!project) { setTags([]); return }
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/git/tags`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/git/tags`)
       const data = await res.json()
       setTags(data.tags || [])
     } catch { setTags([]) }
@@ -190,7 +190,7 @@ function BranchSwitcher({
     setSwitching(branch)
     setError(null)
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/git/checkout`, {
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/git/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ branch }),
@@ -504,7 +504,7 @@ export function SourceControlView() {
     if (!activeProject || pushing) return
     setPushing(true)
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(activeProject)}/git/push`, {
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(activeProject)}/git/push`, {
         method: 'POST',
       })
       const result = await res.json()
@@ -521,7 +521,7 @@ export function SourceControlView() {
     if (!activeProject || pulling) return
     setPulling(true)
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(activeProject)}/git/pull`, {
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(activeProject)}/git/pull`, {
         method: 'POST',
       })
       const result = await res.json()
@@ -543,7 +543,7 @@ export function SourceControlView() {
     if (!activeProject || !tagName.trim() || tagging) return
     setTagging(true)
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(activeProject)}/git/tag`, {
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(activeProject)}/git/tag`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: tagName.trim(), message: tagName.trim() }),

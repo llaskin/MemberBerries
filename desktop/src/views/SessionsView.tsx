@@ -157,7 +157,7 @@ function SessionDetailPanel({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/axon/sessions/${sessionId}`)
+    fetch(`/api/mb/sessions/${sessionId}`)
       .then(r => r.json())
       .then(setDetail)
       .catch(() => setDetail(null))
@@ -981,7 +981,7 @@ export function SessionsView() {
 
   // Fetch installed agents
   useEffect(() => {
-    fetch('/api/axon/sessions/installed-agents')
+    fetch('/api/mb/sessions/installed-agents')
       .then(r => r.json())
       .then(d => setInstalledAgents(d.agents || []))
       .catch(() => {})

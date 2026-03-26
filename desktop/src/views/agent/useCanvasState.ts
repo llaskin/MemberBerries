@@ -33,7 +33,7 @@ export function useCanvasState(projectName: string | null) {
   useEffect(() => {
     if (!projectName) return
     setLoaded(false)
-    fetch(`/api/axon/canvas-layout?project=${encodeURIComponent(projectName)}`)
+    fetch(`/api/mb/canvas-layout?project=${encodeURIComponent(projectName)}`)
       .then(r => r.json())
       .then(data => {
         // Filter stale temp tiles that were never resolved to a real session ID
@@ -77,7 +77,7 @@ export function useCanvasState(projectName: string | null) {
     if (t.length === 0 && savedTileCountRef.current > 0) return
     savedTileCountRef.current = Math.max(savedTileCountRef.current, t.length)
 
-    fetch(`/api/axon/canvas-layout?project=${encodeURIComponent(project)}`, {
+    fetch(`/api/mb/canvas-layout?project=${encodeURIComponent(project)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tiles: t, zones: z, viewport: v }),

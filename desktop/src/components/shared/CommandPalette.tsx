@@ -120,7 +120,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     setSearching(true)
     searchTimerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/axon/sessions/search?q=${encodeURIComponent(q)}`)
+        const res = await fetch(`/api/mb/sessions/search?q=${encodeURIComponent(q)}`)
         if (res.ok) {
           const data = await res.json()
           setSessionResults((data.results || []).slice(0, 8))

@@ -156,7 +156,7 @@ export function MorningView() {
         setStatus('streaming')
 
         try {
-          const res = await fetch('/api/axon/chat', {
+          const res = await fetch('/api/mb/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt }),
@@ -235,7 +235,7 @@ export function MorningView() {
       ])
 
       try {
-        const res = await fetch('/api/axon/chat', {
+        const res = await fetch('/api/mb/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: userMsg.content, continueSession: true }),

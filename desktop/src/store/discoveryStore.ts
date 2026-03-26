@@ -19,7 +19,7 @@ export const useDiscoveryStore = create<DiscoveryStore>((set, get) => ({
   fetchRepos: async () => {
     set({ loading: true })
     try {
-      const res = await fetch('/api/axon/discover-repos')
+      const res = await fetch('/api/mb/discover-repos')
       if (!res.ok) throw new Error('Failed to discover repos')
       const all: DiscoveredRepo[] = await res.json()
 
@@ -42,7 +42,7 @@ export const useDiscoveryStore = create<DiscoveryStore>((set, get) => ({
     set({ initializing: new Set([...initializing, repo.path]) })
 
     try {
-      const res = await fetch('/api/axon/init-quick', {
+      const res = await fetch('/api/mb/init-quick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectName: repo.name, projectPath: repo.path }),
@@ -53,7 +53,7 @@ export const useDiscoveryStore = create<DiscoveryStore>((set, get) => ({
       set({ repos: get().repos.filter(r => r.path !== repo.path) })
 
       // Refresh project list so it appears in sidebar
-      const projRes = await fetch('/api/axon/projects')
+      const projRes = await fetch('/api/mb/projects')
       if (projRes.ok) {
         const projects = await projRes.json()
         useProjectStore.getState().setProjects(projects)

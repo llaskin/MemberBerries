@@ -17,8 +17,8 @@ export function useAnalytics(since: string | null) {
     setLoading(true)
     try {
       const url = since
-        ? `/api/axon/sessions/analytics?since=${encodeURIComponent(since)}`
-        : '/api/axon/sessions/analytics'
+        ? `/api/mb/sessions/analytics?since=${encodeURIComponent(since)}`
+        : '/api/mb/sessions/analytics'
       const res = await fetch(url)
       setData(await res.json())
     } catch {

@@ -51,7 +51,7 @@ function useTodos(project: string | null) {
   const fetchTodos = useCallback(async () => {
     if (!project) { setItems([]); setLoading(false); return }
     try {
-      const res = await fetch(`/api/axon/projects/${encodeURIComponent(project)}/todos`)
+      const res = await fetch(`/api/mb/projects/${encodeURIComponent(project)}/todos`)
       const data = await res.json()
       setItems(data.items || [])
     } catch {
@@ -64,7 +64,7 @@ function useTodos(project: string | null) {
 
   const addTodo = useCallback(async (description: string, priority: TodoPriority, tags?: string[]) => {
     if (!project) return
-    await fetch(`/api/axon/projects/${encodeURIComponent(project)}/todos`, {
+    await fetch(`/api/mb/projects/${encodeURIComponent(project)}/todos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description, priority, tags }),
@@ -74,7 +74,7 @@ function useTodos(project: string | null) {
 
   const updateTodo = useCallback(async (id: number, action: string, extra?: Record<string, unknown>) => {
     if (!project) return
-    await fetch(`/api/axon/projects/${encodeURIComponent(project)}/todos/${id}`, {
+    await fetch(`/api/mb/projects/${encodeURIComponent(project)}/todos/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...extra }),

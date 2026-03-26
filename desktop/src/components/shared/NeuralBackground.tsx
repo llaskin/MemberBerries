@@ -13,7 +13,7 @@ export function NeuralBackground() {
   const muted = activeView === 'terminal'
 
   const gourceUrl = activeProject
-    ? `/api/axon/projects/${encodeURIComponent(activeProject)}/gource`
+    ? `/api/mb/projects/${encodeURIComponent(activeProject)}/gource`
     : null
 
   // Track which project's image failed so we don't retry endlessly

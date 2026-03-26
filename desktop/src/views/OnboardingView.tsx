@@ -318,7 +318,7 @@ function RepoSelector({ onSelect, onQuickInit }: { onSelect: (repo: DiscoveredRe
   }, [simulateEmpty])
 
   useEffect(() => {
-    fetch('/api/axon/discover-repos')
+    fetch('/api/mb/discover-repos')
       .then(r => r.json())
       .then((data: DiscoveredRepo[]) => {
         setRepos(data)
@@ -351,7 +351,7 @@ function RepoSelector({ onSelect, onQuickInit }: { onSelect: (repo: DiscoveredRe
     setScratchError('')
     setScratchLoading(true)
     try {
-      const res = await fetch('/api/axon/scaffold', {
+      const res = await fetch('/api/mb/scaffold', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, parentDir: scratchDir.trim() }),
@@ -612,7 +612,7 @@ function AxonContextSetup({ repo, onContinue, onBack }: {
   const workspacePath = `~/.axon/workspaces/${repo.name}/`
 
   useEffect(() => {
-    fetch('/api/axon/context-status')
+    fetch('/api/mb/context-status')
       .then(r => r.json())
       .then((data: ContextStatus) => {
         setStatus(data)
@@ -995,7 +995,7 @@ function GenesisProgress({ repo, userContext, onComplete, onBack }: {
 
     const run = async () => {
       try {
-        const res = await fetch('/api/axon/init', {
+        const res = await fetch('/api/mb/init', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1231,7 +1231,7 @@ function GenesisReview({ repo, content, configOverrides }: {
   useEffect(() => {
     if (appliedRef.current) return
     appliedRef.current = true
-    fetch(`/api/axon/projects/${encodeURIComponent(repo.name)}/config`, {
+    fetch(`/api/mb/projects/${encodeURIComponent(repo.name)}/config`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

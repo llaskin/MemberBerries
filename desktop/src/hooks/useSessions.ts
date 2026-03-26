@@ -59,8 +59,8 @@ export function useSessions(projectName: string | null) {
   const fetchSessions = useCallback(async () => {
     try {
       const url = projectName
-        ? `/api/axon/sessions?project=${encodeURIComponent(projectName)}`
-        : '/api/axon/sessions'
+        ? `/api/mb/sessions?project=${encodeURIComponent(projectName)}`
+        : '/api/mb/sessions'
       const res = await fetch(url)
       const data = await res.json()
       setSessions(data.sessions || [])
@@ -99,7 +99,7 @@ export function useSessionsByProject() {
   const fetchProjects = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/axon/sessions/by-project')
+      const res = await fetch('/api/mb/sessions/by-project')
       const data = await res.json()
       setProjects(data.projects || [])
       setError(null)
@@ -122,7 +122,7 @@ export function usePromptTimeline(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) { setPrompts([]); return }
     setLoading(true)
-    fetch(`/api/axon/sessions/${sessionId}/prompts`)
+    fetch(`/api/mb/sessions/${sessionId}/prompts`)
       .then(r => r.json())
       .then(data => setPrompts(data.prompts || []))
       .catch(() => setPrompts([]))
@@ -149,7 +149,7 @@ export function useSessionSearch(query: string) {
 
     timerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/axon/sessions/search?q=${encodeURIComponent(query)}`)
+        const res = await fetch(`/api/mb/sessions/search?q=${encodeURIComponent(query)}`)
         const data = await res.json()
         setResults(data.results || [])
       } catch {

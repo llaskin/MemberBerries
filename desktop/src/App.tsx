@@ -34,7 +34,7 @@ import { useErrorStore } from '@/store/errorStore'
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import { Component, type ErrorInfo } from 'react'
 
-// Install global fetch interceptor ONCE — injects auth headers on all /api/axon/* calls
+// Install global fetch interceptor ONCE — injects auth headers on all /api/mb/* calls
 installAuthInterceptor()
 import { useUIStore, type ViewId } from '@/store/uiStore'
 import { useProjectStore } from '@/store/projectStore'

@@ -14,7 +14,7 @@ export function GenesisProgressView() {
   const poll = useCallback(async () => {
     if (!activeProject) return
     try {
-      const res = await fetch(`/api/axon/init-status?project=${encodeURIComponent(activeProject)}`)
+      const res = await fetch(`/api/mb/init-status?project=${encodeURIComponent(activeProject)}`)
       if (!res.ok) return
       const data = await res.json()
       setStatus(data.status)
@@ -22,7 +22,7 @@ export function GenesisProgressView() {
 
       if (data.status === 'complete') {
         // Refresh projects and go to timeline
-        const projRes = await fetch('/api/axon/projects')
+        const projRes = await fetch('/api/mb/projects')
         if (projRes.ok) {
           setProjects(await projRes.json())
         }
