@@ -1,6 +1,12 @@
-# Agent Sessions
+<p align="center">
+  <img src="docs/assets/memberberries-logo.png" alt="MemberBerries" width="400" />
+</p>
 
-A local-first dashboard for tracking your AI coding agent activity across Claude Code, Codex, Cursor, and GitHub Copilot. See what you worked on, how many tokens you used, and drill into session details — all from a single unified view.
+<h1 align="center">MemberBerries</h1>
+
+<p align="center">
+  A local-first dashboard for tracking your AI coding agent activity across Claude Code, Codex, Cursor, and GitHub Copilot. See what you worked on, how many tokens you used, and drill into session details — all from a single unified view.
+</p>
 
 ## Features
 
