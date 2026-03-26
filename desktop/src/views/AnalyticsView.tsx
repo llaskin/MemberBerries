@@ -82,7 +82,7 @@ export function AnalyticsView() {
         <div className="bg-ax-elevated rounded-xl border border-ax-border p-5">
           <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Active Agents</div>
           <div className="text-2xl font-bold text-ax-text-primary">{data.activeAgents.length}</div>
-          <div className="font-mono text-micro text-ax-text-tertiary mt-1">
+          <div className="font-mono text-micro text-ax-text-tertiary mt-1 truncate" title={data.activeAgents.map(a => AGENTS[a as AgentId]?.name || a).join(', ')}>
             {data.activeAgents.map(a => AGENTS[a as AgentId]?.name || a).join(', ')}
           </div>
         </div>
@@ -95,7 +95,7 @@ export function AnalyticsView() {
           {data.tokensByAgent.map(a => (
             <div key={a.agent} className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: agentColor(a.agent) }} />
-              <span className="font-mono text-small text-ax-text-secondary w-28 shrink-0 truncate">
+              <span className="font-mono text-small text-ax-text-secondary w-28 shrink-0 truncate" title={AGENTS[a.agent as AgentId]?.name || a.agent}>
                 {AGENTS[a.agent as AgentId]?.name || a.agent}
               </span>
               <div className="flex-1 h-4 bg-ax-sunken rounded-full overflow-hidden">
@@ -104,7 +104,7 @@ export function AnalyticsView() {
                   background: agentColor(a.agent),
                 }} />
               </div>
-              <span className="font-mono text-micro text-ax-text-tertiary w-16">
+              <span className="font-mono text-micro text-ax-text-tertiary w-16 truncate" title={a.tokens > 0 ? a.tokens.toLocaleString() + ' tokens' : 'N/A'}>
                 {a.tokens > 0 ? formatTokens(a.tokens) : 'N/A'}
               </span>
             </div>
@@ -128,7 +128,7 @@ export function AnalyticsView() {
                     background: agentColor(m.agent),
                   }} />
                 </div>
-                <span className="font-mono text-micro text-ax-text-tertiary w-16">{formatTokens(m.tokens)}</span>
+                <span className="font-mono text-micro text-ax-text-tertiary w-16 truncate" title={m.tokens.toLocaleString() + ' tokens'}>{formatTokens(m.tokens)}</span>
               </div>
             ))}
           </div>
