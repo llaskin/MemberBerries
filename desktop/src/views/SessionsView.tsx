@@ -250,18 +250,9 @@ function SessionDetailPanel({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {/* Actions + Session ID */}
-      <div className="pt-3 border-t border-ax-border-subtle flex items-center gap-3">
-        <button
-          onClick={() => useUIStore.getState().openTerminal(sessionId)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-ax-brand text-white rounded-lg
-            text-small font-mono hover:bg-ax-brand-hover transition-colors
-            focus:outline-none focus-visible:ring-2 focus-visible:ring-ax-brand"
-        >
-          <Play size={12} />
-          Resume in Terminal
-        </button>
-        <span className="font-mono text-micro text-ax-text-tertiary select-all ml-auto">{sessionId}</span>
+      {/* Session ID */}
+      <div className="pt-3 border-t border-ax-border-subtle">
+        <span className="font-mono text-micro text-ax-text-tertiary select-all">{sessionId}</span>
       </div>
     </div>
   )
