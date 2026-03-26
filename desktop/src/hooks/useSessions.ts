@@ -78,12 +78,7 @@ export function useSessions(projectName: string | null) {
     fetchSessions()
   }, [fetchSessions])
 
-  // Poll for index progress while indexing is happening
-  useEffect(() => {
-    if (indexStatus.ready && indexStatus.analyticsIndexed >= indexStatus.totalSessions) return
-    const interval = setInterval(fetchSessions, 3000)
-    return () => clearInterval(interval)
-  }, [indexStatus, fetchSessions])
+  // No polling — manual refresh only (page reload or refetch call)
 
   return { sessions, indexStatus, loading, error, refetch: fetchSessions }
 }

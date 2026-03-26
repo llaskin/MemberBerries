@@ -2,157 +2,119 @@
 
 ## Overview
 
-All data stays local by default. The **only outbound call** is the `claude` CLI during nightly rollups, which sends only redacted session summaries to the Anthropic API.
+MemberBerries is a **100% local** application. It makes **zero network calls**. No API calls, no telemetry, no phoning home. All data is read from local agent directories and stored in a local SQLite database.
 
 ## Data Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        LOCAL MACHINE                                │
-│                                                                     │
-│  ┌─────────────────────────────────────┐                           │
-│  │   Claude Code Data (read-only)      │                           │
-│  │                                     │                           │
-│  │  ~/.claude/projects/*/              │                           │
-│  │    sessions-index.json              │──┐                        │
-│  │    {sessionId}.jsonl ◄──────────────│──┤ Full transcripts:      │
-│  │                                     │  │ user prompts,          │
-│  │  ~/.claude/history.jsonl            │──┤ assistant responses,   │
-│  │    (user prompts only)              │  │ tool calls, errors     │
-│  │                                     │  │                        │
-│  │  ~/.claude/session-manager-meta.json│  │ User metadata:         │
-│  │    (tags, pins, nicknames)          │  │ tags, pins, nicknames  │
-│  └─────────────────────────────────────┘  │                        │
-│                                           │                        │
-│                   ┌───────────────────────┘                        │
-│                   ▼                                                 │
-│  ┌─────────────────────────────────────┐                           │
-│  │   Session Indexer (TypeScript)       │                           │
-│  │   desktop/src/lib/sessionIndexer.ts  │                           │
-│  │                                     │                           │
-│  │   Phase 1: Fast scan (index.json)   │                           │
-│  │   Phase 2: Analytics (JSONL parse)  │                           │
-│  │   Phase 3: FTS index (search)       │                           │
-│  └──────────────┬──────────────────────┘                           │
-│                 │                                                   │
-│                 ▼                                                   │
-│  ┌─────────────────────────────────────┐                           │
-│  │   Sessions SQLite DB                │                           │
-│  │   ~/.axon/sessions.db               │ NEVER LEAVES MACHINE      │
-│  │                                     │                           │
-│  │   Tables:                           │                           │
-│  │   - sessions (metadata, analytics)  │                           │
-│  │   - files_touched (per session)     │                           │
-│  │   - session_fts (full-text search)  │                           │
-│  └──────────┬──────────┬──────────────┘                           │
-│             │          │                                           │
-│     ┌───────┘          └────────┐                                  │
-│     ▼                           ▼                                  │
-│  ┌──────────────────┐  ┌──────────────────────────┐               │
-│  │ Electron UI       │  │ Session Dendrite          │               │
-│  │ (localhost only)  │  │ sessionDendrite.ts         │               │
-│  │                   │  │                            │               │
-│  │ Day View          │  │ 1. Query SQLite (since)    │               │
-│  │ Session View      │  │ 2. Load history.jsonl      │               │
-│  │ Project View      │  │ 3. ┌─────────────────┐    │               │
-│  │                   │  │    │ REDACTION LAYER  │    │               │
-│  │ Prompt Timeline ◄─┤  │    │ redact.ts        │    │               │
-│  │ (from history.jsonl│  │    │                  │    │               │
-│  │  via redact.ts)   │  │    │ Scrubs:          │    │               │
-│  │                   │  │    │ - API keys       │    │               │
-│  │ Detail Panel      │  │    │ - GitHub tokens  │    │               │
-│  │ Related Sessions  │  │    │ - Slack tokens   │    │               │
-│  │                   │  │    │ - JWTs           │    │               │
-│  │ NO NETWORK CALLS  │  │    │ - AWS keys       │    │               │
-│  └──────────────────┘  │    │ - Conn strings   │    │               │
-│                         │    │ - Private keys   │    │               │
-│                         │    │ - .env secrets   │    │               │
-│                         │    │ - Custom patterns│    │               │
-│                         │    └─────────────────┘    │               │
-│                         │ 4. pastedContents STRIPPED │               │
-│                         │ 5. Write markdown dendrite │               │
-│                         └──────────┬─────────────────┘               │
-│                                    │                                 │
-│                                    ▼                                 │
-│  ┌─────────────────────────────────────┐                           │
-│  │   ~/.axon/workspaces/claude-sessions│ NEVER LEAVES MACHINE      │
-│  │                                     │                           │
-│  │   dendrites/                        │                           │
-│  │     {timestamp}_claude-sessions.md  │ ◄── Redacted summaries   │
-│  │                                     │                           │
-│  │   episodes/                         │                           │
-│  │     {date}_rollup.md               │ ◄── AI-generated rollups  │
-│  │                                     │                           │
-│  │   state.md                          │ ◄── Current context       │
-│  │   config.yaml                       │                           │
-│  │   stream.md                         │                           │
-│  └──────────────┬──────────────────────┘                           │
-│                 │                                                   │
-│                 │  axon-rollup reads redacted                       │
-│                 │  dendrites + state.md                             │
-│                 ▼                                                   │
-│  ┌─────────────────────────────────────┐                           │
-│  │   axon-rollup (bash + claude CLI)   │                           │
-│  │                                     │                           │
-│  │   Assembles prompt from:            │                           │
-│  │   - Redacted dendrites              │                           │
-│  │   - state.md                        │                           │
-│  │   - Recent episodes                 │                           │
-│  │                                     │                           │
-│  │   Rollup agent has NO tool access   │                           │
-│  │   (allowed_tools: [] in config)     │                           │
-│  └──────────────┬──────────────────────┘                           │
-│                 │                                                   │
-└─────────────────┼───────────────────────────────────────────────────┘
-                  │
-══════════════════╪═══════════════════════ NETWORK BOUNDARY ═══════════
-                  │
-                  │  ONLY redacted text crosses this line:
-                  │  - Session summaries (heuristic, not raw transcripts)
-                  │  - Redacted prompt text (secrets scrubbed)
-                  │  - NO pastedContents
-                  │  - NO file contents from sessions
-                  │  - NO raw JSONL data
-                  │  - NO SQLite data
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│   Anthropic API                         │
-│   (via claude CLI)                      │
-│                                         │
-│   Receives: redacted rollup prompt      │
-│   Returns: synthesized rollup text      │
-│                                         │
-│   Subject to Anthropic data policies    │
-│   (same as normal Claude Code usage)    │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           LOCAL MACHINE                                  │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────┐       │
+│  │   Agent Data Sources (all read-only — never modified)        │       │
+│  │                                                              │       │
+│  │  Claude Code                                                 │       │
+│  │  ├── ~/.claude/projects/*/sessions-index.json                │       │
+│  │  ├── ~/.claude/projects/*/{sessionId}.jsonl  ◄── transcripts │       │
+│  │  ├── ~/.claude/history.jsonl  ◄── user prompts only          │       │
+│  │  └── ~/.claude/session-manager-meta.json  ◄── tags/pins      │       │
+│  │                                                              │       │
+│  │  Codex                                                       │       │
+│  │  ├── ~/.codex/state_5.sqlite  ◄── threads table              │       │
+│  │  ├── ~/.codex/history.jsonl  ◄── prompt history              │       │
+│  │  └── ~/.codex/config.toml  ◄── model name                   │       │
+│  │                                                              │       │
+│  │  Cursor                                                      │       │
+│  │  └── ~/.cursor/ai-tracking/ai-code-tracking.db  ◄── code AI │       │
+│  │                                                              │       │
+│  │  GitHub Copilot                                              │       │
+│  │  └── ~/.copilot/command-history-state.json  ◄── CLI history  │       │
+│  └──────────────────────────────────────────────────────────────┘       │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────┐       │
+│  │   Agent Adapters (TypeScript)                                │       │
+│  │   desktop/src/lib/agents/                                    │       │
+│  │                                                              │       │
+│  │   claude.ts ──► Session Indexer (3-phase: scan/analytics/FTS)│       │
+│  │   codex.ts ───► Reads SQLite threads + config.toml           │       │
+│  │   cursor.ts ──► Reads ai-tracking DB, groups by conversation │       │
+│  │   copilot.ts ─► Reads command-history JSON                   │       │
+│  │                                                              │       │
+│  │   All adapters normalize to AgentSession interface           │       │
+│  └──────────────────────┬───────────────────────────────────────┘       │
+│                         │                                               │
+│                         ▼                                               │
+│  ┌──────────────────────────────────────────────────────────────┐       │
+│  │   Sessions SQLite DB                                         │       │
+│  │   ~/.memberberries/sessions.db          NEVER LEAVES MACHINE │       │
+│  │                                                              │       │
+│  │   Tables:                                                    │       │
+│  │   ├── sessions (agent, model, tokens, metadata, analytics)   │       │
+│  │   ├── files_touched (per session file operations)            │       │
+│  │   └── session_fts (full-text search index)                   │       │
+│  └──────────────────────┬───────────────────────────────────────┘       │
+│                         │                                               │
+│                         ▼                                               │
+│  ┌──────────────────────────────────────────────────────────────┐       │
+│  │   Web Dashboard (localhost:1420 only)                        │       │
+│  │                                                              │       │
+│  │   Agent Sessions ──► Day View / Sessions View                │       │
+│  │     ├── Session cards with agent badges                      │       │
+│  │     ├── Agent filter pills (All/Claude/Codex/Cursor/Copilot) │       │
+│  │     ├── Expandable detail panels (tools, files, git commits) │       │
+│  │     ├── Prompt timeline (from history.jsonl via redact.ts)   │       │
+│  │     └── Related sessions                                    │       │
+│  │                                                              │       │
+│  │   Analytics ──► Token charts                                 │       │
+│  │     ├── Tokens by Agent (bar chart)                          │       │
+│  │     ├── Tokens by Model (bar chart)                          │       │
+│  │     ├── Summary cards (avg tokens, total, sessions, agents)  │       │
+│  │     └── Period toggle (Today/Week/Month/All Time)            │       │
+│  │                                                              │       │
+│  │   ┌─────────────────────────────────────┐                   │       │
+│  │   │  REDACTION LAYER (redact.ts)        │                   │       │
+│  │   │  Applied to all displayed text:     │                   │       │
+│  │   │  ├── API keys (sk-ant-, sk-proj-)   │                   │       │
+│  │   │  ├── GitHub/Slack tokens            │                   │       │
+│  │   │  ├── JWTs, AWS keys                 │                   │       │
+│  │   │  ├── Connection strings             │                   │       │
+│  │   │  ├── Private keys, .env secrets     │                   │       │
+│  │   │  └── Custom patterns from config    │                   │       │
+│  │   └─────────────────────────────────────┘                   │       │
+│  │                                                              │       │
+│  │   ZERO NETWORK CALLS                                         │       │
+│  └──────────────────────────────────────────────────────────────┘       │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+                    ╔══════════════════════════════════╗
+                    ║  NOTHING CROSSES THIS BOUNDARY   ║
+                    ║  No API calls. No telemetry.     ║
+                    ║  No outbound network traffic.    ║
+                    ╚══════════════════════════════════╝
 ```
-
-## What Leaves Your Machine
-
-| Data | Destination | When | Content |
-|------|------------|------|---------|
-| Redacted session summaries | Anthropic API | During rollup only | Heuristic summaries, tool counts, file names (no file contents) |
-| Redacted prompt text | Anthropic API | During rollup only | User prompts with secrets scrubbed |
 
 ## What NEVER Leaves Your Machine
 
 | Data | Storage Location |
 |------|-----------------|
 | Raw session JSONL files | `~/.claude/projects/*/` |
-| `history.jsonl` | `~/.claude/history.jsonl` |
-| Full prompt text (unredacted) | Only in memory during redaction, never persisted outside `~/.claude/` |
-| `pastedContents` | Stripped at parse time, never written to `~/.axon/` |
+| Prompt history | `~/.claude/history.jsonl`, `~/.codex/history.jsonl` |
+| Full prompt text (unredacted) | Only in memory during redaction |
+| `pastedContents` | Stripped at parse time, never persisted |
 | Session metadata (tags, pins) | `~/.claude/session-manager-meta.json` |
-| SQLite database | `~/.axon/sessions.db` |
-| All `~/.axon/` files | `~/.axon/workspaces/claude-sessions/` |
-| Assistant responses | `~/.claude/projects/*/*.jsonl` (never read by dendrite) |
-| File contents from tool calls | `~/.claude/projects/*/*.jsonl` (never extracted) |
+| Codex threads/tokens | `~/.codex/state_5.sqlite` |
+| Cursor AI tracking | `~/.cursor/ai-tracking/` |
+| Copilot command history | `~/.copilot/command-history-state.json` |
+| SQLite database | `~/.memberberries/sessions.db` |
 
-## Electron Security
+## Security Model
 
 - Express server binds to `127.0.0.1` only — not accessible from network
 - No remote URLs loaded — all content is local files
-- No `nodeIntegration` in renderer process
-- No auto-update mechanism (no phoning home)
-- Rollup agent has no tool access (cannot read arbitrary files)
+- No shell spawning or terminal access
+- No auto-update mechanism
+- No telemetry or analytics collection
+- Secrets redacted before display using compiled regex patterns
+- All agent data directories are read-only — MemberBerries never writes to them
