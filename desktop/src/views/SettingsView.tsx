@@ -40,7 +40,7 @@ export function SettingsView() {
           </div>
           <div className="flex justify-between">
             <span className="text-small text-ax-text-secondary">Data Location</span>
-            <span className="font-mono text-small text-ax-text-primary">~/.axon/sessions.db</span>
+            <span className="font-mono text-small text-ax-text-primary">~/.memberberries/sessions.db</span>
           </div>
           <div className="flex justify-between">
             <span className="text-small text-ax-text-secondary">Source</span>

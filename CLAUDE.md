@@ -13,7 +13,7 @@ MemberBerries/
 ├── desktop/          # React + Vite — the web dashboard
 └── docs/             # Design specs, plans, data flow diagram
 
-~/.axon/
+~/.memberberries/
 ├── sessions.db       # SQLite — all agent sessions indexed here
 ```
 

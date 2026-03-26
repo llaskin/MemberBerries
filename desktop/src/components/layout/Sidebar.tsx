@@ -238,8 +238,8 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
               onClick={() => setView('timeline')}
               aria-label="Go to timeline"
             >
-              <img src="/branding/axon-mark-light.png" alt="" className="w-9 h-9 rounded" aria-hidden="true" />
-              <span className="font-serif italic text-display text-[var(--ax-text-on-dark)] tracking-tight">axon</span>
+              <img src="/memberberries-icon.png" alt="" className="w-9 h-9 rounded" aria-hidden="true" />
+              <span className="font-serif italic text-display text-[var(--ax-text-on-dark)] tracking-tight">MemberBerries</span>
             </button>
             <button
               onClick={toggleSidebar}
@@ -568,7 +568,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
         </button>
         <button
           onClick={() => setView('about')}
-          aria-label="About Axon"
+          aria-label="About MemberBerries"
           className={`p-2 rounded-lg transition-colors
             focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ax-brand-primary)]
             ${activeView === 'about'

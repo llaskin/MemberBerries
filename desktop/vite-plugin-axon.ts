@@ -6,7 +6,7 @@ import { setupTerminalWs } from './src/lib/terminalWs'
 import { createAxonMiddleware, handleAxonUpgrade, setupCleanupHandlers } from './src/server/axonMiddleware'
 
 export function axonDevApi(): Plugin {
-  const AXON_HOME = resolve(join(homedir(), '.axon'))
+  const AXON_HOME = resolve(join(homedir(), '.memberberries'))
 
   return {
     name: 'axon-dev-api',

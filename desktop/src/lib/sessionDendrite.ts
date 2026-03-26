@@ -62,7 +62,7 @@ if (fs.existsSync(configPath)) {
 }
 
 // --- Open sessions DB ---
-const dbPath = path.join(HOME, '.axon', 'sessions.db')
+const dbPath = path.join(HOME, '.memberberries', 'sessions.db')
 if (!fs.existsSync(dbPath)) {
   console.error(`Sessions database not found: ${dbPath}`)
   process.exit(1)

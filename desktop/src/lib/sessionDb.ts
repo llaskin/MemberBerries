@@ -6,11 +6,11 @@ import { execSync } from 'child_process'
 
 let db: Database.Database | null = null
 let rebuildAttempted = false
-const DB_PATH = join(homedir(), '.axon', 'sessions.db')
+const DB_PATH = join(homedir(), '.memberberries', 'sessions.db')
 
 export function getSessionDb(): Database.Database {
   if (db) return db
-  mkdirSync(join(homedir(), '.axon'), { recursive: true })
+  mkdirSync(join(homedir(), '.memberberries'), { recursive: true })
   try {
     db = new Database(DB_PATH)
   } catch (err: unknown) {
