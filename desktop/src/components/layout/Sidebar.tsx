@@ -8,7 +8,7 @@ import { useDiscoveredRepos } from '@/hooks/useDiscoveredRepos'
 import { Clock, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, Brain, PanelLeftClose, PanelLeftOpen, Keyboard, CheckSquare, GitBranch, GripVertical, HelpCircle, X, Globe, EyeOff } from 'lucide-react'
 import { useUpdateChecker } from '@/hooks/useUpdateChecker'
 
-const HINT_STORAGE_KEY = 'axon-shortcut-hints-dismissed'
+const HINT_STORAGE_KEY = 'mb-shortcut-hints-dismissed'
 const HINT_DURATION_MS = 4000
 
 const mainNav: { id: ViewId; label: string; icon: typeof Clock }[] = [
@@ -126,7 +126,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
 
   // Clear stale keys from previous versions on mount
   useEffect(() => {
-    localStorage.removeItem('axon-shortcut-hints-seen')
+    localStorage.removeItem('mb-shortcut-hints-seen')
   }, [])
 
   const showHint = useCallback((keys: string[], desc: string, el: HTMLElement) => {

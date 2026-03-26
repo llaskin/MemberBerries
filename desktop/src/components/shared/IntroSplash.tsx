@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useDebugStore } from '@/store/debugStore'
 
-const STORAGE_KEY = 'axon-intro-seen'
+const STORAGE_KEY = 'mb-intro-seen'
 const PLAYBACK_RATE = 2.5
 const START_PERCENT = 0.50
 const FADE_DURATION_MS = 1500

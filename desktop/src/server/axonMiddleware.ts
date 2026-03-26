@@ -343,7 +343,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         const homeExists = existsSync(AXON_HOME)
         checks.push({
           id: 'axon-home',
-          label: 'Axon data directory',
+          label: 'MemberBerries data directory',
           status: homeExists ? 'pass' : 'fail',
           detail: homeExists ? AXON_HOME : `${AXON_HOME} not found`,
           action: homeExists ? undefined : 'Will be created during onboarding',
@@ -392,11 +392,11 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
             detail = 'Bundled with app'
           }
 
-          checks.push({ id: 'cli', label: 'Axon CLI', status, detail, action, actionType })
+          checks.push({ id: 'cli', label: 'MemberBerries CLI', status, detail, action, actionType })
         } else {
           checks.push({
             id: 'cli',
-            label: 'Axon CLI',
+            label: 'MemberBerries CLI',
             status: 'warn',
             detail: 'Not in PATH (optional — app works without it)',
             action: 'Install via npm for terminal use',
@@ -506,10 +506,10 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
           if (actionType === 'install-cli') {
             execSync('npm install -g axon-dev', execOpts)
-            res.end(JSON.stringify({ ok: true, message: 'Axon CLI installed' }))
+            res.end(JSON.stringify({ ok: true, message: 'MemberBerries CLI installed' }))
           } else if (actionType === 'update-cli') {
             execSync('npm install -g axon-dev@latest', execOpts)
-            res.end(JSON.stringify({ ok: true, message: 'Axon CLI updated' }))
+            res.end(JSON.stringify({ ok: true, message: 'MemberBerries CLI updated' }))
           } else {
             res.statusCode = 400
             res.end(JSON.stringify({ ok: false, error: 'Unknown action' }))

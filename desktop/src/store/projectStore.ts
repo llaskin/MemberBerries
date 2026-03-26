@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Project } from '@/lib/types'
 
-const ORDER_KEY = 'axon-project-order'
+const ORDER_KEY = 'mb-project-order'
 function loadOrder(): string[] {
   try { return JSON.parse(localStorage.getItem(ORDER_KEY) || '[]') } catch { return [] }
 }

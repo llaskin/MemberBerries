@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Check, AlertTriangle, X, Loader2, Terminal, Download, ExternalLink, RefreshCw } from 'lucide-react'
 import { useDebugStore } from '@/store/debugStore'
 
-const STORAGE_KEY = 'axon-preflight-passed'
+const STORAGE_KEY = 'mb-preflight-passed'
 
 interface PreflightItem {
   id: string
