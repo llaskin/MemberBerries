@@ -40,7 +40,7 @@ export interface JobSummary {
 const cache = new Map<string, Database.Database>()
 
 function axonHome(): string {
-  return process.env.AXON_HOME || join(homedir(), '.axon')
+  return process.env.AXON_HOME || join(homedir(), '.memberberries')
 }
 
 function wsDir(project: string): string {

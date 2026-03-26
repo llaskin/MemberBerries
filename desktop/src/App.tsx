@@ -1,17 +1,12 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react'
-import { Coffee, Brain, Clock, Plus } from 'lucide-react'
+import { Brain, Clock } from 'lucide-react'
 import { DataProvider } from '@/providers/DataProvider'
 import { Shell } from '@/components/layout/Shell'
-import { TimelineView } from '@/views/TimelineView'
-import { RollupDetailView } from '@/views/RollupDetailView'
-import { StateView } from '@/views/StateView'
 import { SettingsView } from '@/views/SettingsView'
-import { DecisionsView } from '@/views/DecisionsView'
-import { MorningView } from '@/views/MorningView'
-import { OnboardingView } from '@/views/OnboardingView'
-import { AgentView } from '@/views/AgentView'
 import { SessionsView } from '@/views/SessionsView'
 import { AnalyticsView } from '@/views/AnalyticsView'
+import { AboutView } from '@/views/AboutView'
+import { AuthOverlay } from '@/components/shared/AuthOverlay'
 
 function AnalyticsViewPage() {
   return (
@@ -20,14 +15,6 @@ function AnalyticsViewPage() {
     </div>
   )
 }
-import { TodosView } from '@/views/TodosView'
-import { SourceControlView } from '@/views/SourceControlView'
-import { AboutView } from '@/views/AboutView'
-import { GenesisProgressView } from '@/views/GenesisProgressView'
-import { DeepSearchView } from '@/views/DeepSearchView'
-import { IntroSplash } from '@/components/shared/IntroSplash'
-import { PreflightCheck } from '@/components/shared/PreflightCheck'
-import { AuthOverlay } from '@/components/shared/AuthOverlay'
 import { setAuthHandler, installAuthInterceptor } from '@/lib/apiClient'
 import { ErrorToast } from '@/components/shared/ErrorToast'
 import { useErrorStore } from '@/store/errorStore'
@@ -176,21 +163,15 @@ function ViewRouter() {
         ))}
       </div>
 
-      {/* Sub-views overlay on top (rollup detail, state, etc.) */}
+      {/* Sub-views overlay on top */}
       {isSubView && (
         <div key={activeView} className={`absolute inset-0 z-10 bg-ax-base ${
           swipeDir === 'right' ? 'animate-slide-right'
           : swipeDir === 'left' ? 'animate-slide-left'
           : 'animate-fade-in'
         }`}>
-          <div className={`${activeView === 'onboarding' ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 sm:px-8 py-6 sm:py-10 overflow-y-auto h-full`}>
-            {activeView === 'rollup-detail' && <RollupDetailView />}
-            {activeView === 'state' && <StateView />}
-            {activeView === 'decisions' && <DecisionsView />}
-            {activeView === 'onboarding' && <OnboardingView />}
-            {activeView === 'genesis-progress' && <GenesisProgressView />}
+          <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-10 overflow-y-auto h-full">
             {activeView === 'about' && <AboutView />}
-            {activeView === 'deep-search' && <DeepSearchView />}
           </div>
         </div>
       )}

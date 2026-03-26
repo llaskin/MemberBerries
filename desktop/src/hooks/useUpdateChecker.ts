@@ -8,7 +8,7 @@ interface UpdateState {
 }
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes
-const GITHUB_API = 'https://api.github.com/repos/AxonEmbodied/axon/releases/latest'
+const GITHUB_API = 'https://api.github.com/repos/llaskin/MemberBerries/releases/latest'
 
 // Module-level cache — survives re-renders, not page reloads
 let cached: { latestVersion: string; latestUrl: string; updateAvailable: boolean } | null = null

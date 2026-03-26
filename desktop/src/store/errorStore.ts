@@ -86,5 +86,5 @@ export function buildIssueUrl(error: ErrorEntry): string {
     labels: 'bug',
   })
 
-  return `https://github.com/AxonEmbodied/AXON/issues/new?${params}`
+  return `https://github.com/llaskin/MemberBerries/issues/new?${params}`
 }
