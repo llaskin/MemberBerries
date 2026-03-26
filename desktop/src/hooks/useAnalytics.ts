@@ -4,8 +4,13 @@ export interface AnalyticsData {
   totalTokens: number
   avgTokensPerSession: number
   totalSessions: number
-  tokensByAgent: { agent: string; tokens: number }[]
-  tokensByModel: { model: string; agent: string; tokens: number }[]
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalCacheCreationTokens: number
+  totalCacheReadTokens: number
+  totalCost: number
+  tokensByAgent: { agent: string; tokens: number; cost: number }[]
+  tokensByModel: { model: string; agent: string; tokens: number; inputTokens: number; outputTokens: number; cacheCreationTokens: number; cacheReadTokens: number }[]
   activeAgents: string[]
 }
 

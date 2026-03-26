@@ -28,6 +28,8 @@ export interface ParsedSession {
   errors: number
   estimatedInputTokens: number
   estimatedOutputTokens: number
+  cacheCreationTokens: number
+  cacheReadTokens: number
   estimatedCostUsd: number | null
   heuristicSummary: string | null
   heatStrip: HeatSegment[]
@@ -85,6 +87,8 @@ export function parseJsonlFile(filePath: string): ParsedSession | null {
     let errorCount = 0
     let inputTokens = 0
     let outputTokens = 0
+    let cacheCreationTokens = 0
+    let cacheReadTokens = 0
     let messageCount = 0
     const heatStrip: HeatSegment[] = []
     const gitCommands: string[] = []
@@ -105,12 +109,11 @@ export function parseJsonlFile(filePath: string): ParsedSession | null {
         // Usage metadata — prefer actual API usage over estimates
         const usage = msg.message?.usage || msg.usage
         if (usage) {
-          // input_tokens includes prompt tokens
           if (usage.input_tokens) inputTokens += usage.input_tokens
-          // cache tokens are additional input tokens (creation + reads)
-          if (usage.cache_creation_input_tokens) inputTokens += usage.cache_creation_input_tokens
-          if (usage.cache_read_input_tokens) inputTokens += usage.cache_read_input_tokens
           if (usage.output_tokens) outputTokens += usage.output_tokens
+          // Track cache tokens separately for accurate cost calculation
+          if (usage.cache_creation_input_tokens) cacheCreationTokens += usage.cache_creation_input_tokens
+          if (usage.cache_read_input_tokens) cacheReadTokens += usage.cache_read_input_tokens
         }
 
         // Tool use blocks
@@ -187,13 +190,6 @@ export function parseJsonlFile(filePath: string): ParsedSession | null {
       }))
       .sort((a, b) => b.count - a.count)
 
-    let estimatedCostUsd: number | null = null
-    if (inputTokens > 0 || outputTokens > 0) {
-      estimatedCostUsd =
-        (inputTokens / 1_000_000) * INPUT_COST_PER_MTOK +
-        (outputTokens / 1_000_000) * OUTPUT_COST_PER_MTOK
-    }
-
     return {
       messageCount,
       toolCalls: toolCallList,
@@ -203,7 +199,9 @@ export function parseJsonlFile(filePath: string): ParsedSession | null {
       errors: errorCount,
       estimatedInputTokens: inputTokens,
       estimatedOutputTokens: outputTokens,
-      estimatedCostUsd,
+      cacheCreationTokens,
+      cacheReadTokens,
+      estimatedCostUsd: null, // calculated by pricing module, not here
       heuristicSummary: buildHeuristicSummary(filesTouched, bashCount, gitCommands.length, errorCount, totalToolCalls),
       heatStrip,
       gitCommands,

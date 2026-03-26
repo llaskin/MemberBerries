@@ -52,6 +52,7 @@ function runMigrations(db: Database.Database): void {
   const version = (db.pragma('user_version', { simple: true }) as number) || 0
   if (version < 1) migrateV1(db)
   if (version < 2) migrateV2(db)
+  if (version < 3) migrateV3(db)
 }
 
 function migrateV1(db: Database.Database): void {
@@ -137,6 +138,16 @@ function migrateV2(db: Database.Database): void {
   db.pragma('user_version = 2')
 }
 
+function migrateV3(db: Database.Database): void {
+  db.exec(`
+    ALTER TABLE sessions ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sessions ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
+  `)
+  // Reset analytics so sessions get re-parsed with separate cache token tracking
+  db.exec(`UPDATE sessions SET analytics_indexed = 0;`)
+  db.pragma('user_version = 3')
+}
+
 // --- Query helpers ---
 
 export interface SessionRow {
@@ -168,6 +179,8 @@ export interface SessionRow {
   agent: string
   model: string | null
   estimated_total_tokens: number
+  cache_creation_tokens: number
+  cache_read_tokens: number
 }
 
 export interface FileTouchedRow {
@@ -254,8 +267,13 @@ export interface AnalyticsData {
   totalTokens: number
   avgTokensPerSession: number
   totalSessions: number
-  tokensByAgent: { agent: string; tokens: number }[]
-  tokensByModel: { model: string; agent: string; tokens: number }[]
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalCacheCreationTokens: number
+  totalCacheReadTokens: number
+  totalCost: number
+  tokensByAgent: { agent: string; tokens: number; cost: number }[]
+  tokensByModel: { model: string; agent: string; tokens: number; inputTokens: number; outputTokens: number; cacheCreationTokens: number; cacheReadTokens: number }[]
   activeAgents: string[]
 }
 
@@ -265,18 +283,31 @@ export function getAnalytics(since?: string): AnalyticsData {
   const params = since ? [since] : []
 
   const totals = db.prepare(`
-    SELECT COUNT(*) as cnt, COALESCE(SUM(estimated_total_tokens), 0) as total
+    SELECT COUNT(*) as cnt,
+      COALESCE(SUM(estimated_total_tokens), 0) as total,
+      COALESCE(SUM(estimated_input_tokens), 0) as totalInput,
+      COALESCE(SUM(estimated_output_tokens), 0) as totalOutput,
+      COALESCE(SUM(cache_creation_tokens), 0) as totalCacheCreation,
+      COALESCE(SUM(cache_read_tokens), 0) as totalCacheRead,
+      COALESCE(SUM(estimated_cost_usd), 0) as totalCost
     FROM sessions ${whereClause}
   `).get(...params) as any
 
   const byAgent = db.prepare(`
-    SELECT agent, COALESCE(SUM(estimated_total_tokens), 0) as tokens
+    SELECT agent,
+      COALESCE(SUM(estimated_total_tokens), 0) as tokens,
+      COALESCE(SUM(estimated_cost_usd), 0) as cost
     FROM sessions ${whereClause}
     GROUP BY agent ORDER BY tokens DESC
   `).all(...params) as any[]
 
   const byModel = db.prepare(`
-    SELECT model, agent, COALESCE(SUM(estimated_total_tokens), 0) as tokens
+    SELECT model, agent,
+      COALESCE(SUM(estimated_total_tokens), 0) as tokens,
+      COALESCE(SUM(estimated_input_tokens), 0) as inputTokens,
+      COALESCE(SUM(estimated_output_tokens), 0) as outputTokens,
+      COALESCE(SUM(cache_creation_tokens), 0) as cacheCreationTokens,
+      COALESCE(SUM(cache_read_tokens), 0) as cacheReadTokens
     FROM sessions ${since ? 'WHERE model IS NOT NULL AND modified_at >= ?' : 'WHERE model IS NOT NULL'}
     GROUP BY model, agent ORDER BY tokens DESC
   `).all(...params) as any[]
@@ -289,8 +320,17 @@ export function getAnalytics(since?: string): AnalyticsData {
     totalTokens: totals.total || 0,
     avgTokensPerSession: totals.cnt > 0 ? Math.round((totals.total || 0) / totals.cnt) : 0,
     totalSessions: totals.cnt || 0,
-    tokensByAgent: byAgent.map((r: any) => ({ agent: r.agent, tokens: r.tokens || 0 })),
-    tokensByModel: byModel.map((r: any) => ({ model: r.model || 'unknown', agent: r.agent, tokens: r.tokens || 0 })),
+    totalInputTokens: totals.totalInput || 0,
+    totalOutputTokens: totals.totalOutput || 0,
+    totalCacheCreationTokens: totals.totalCacheCreation || 0,
+    totalCacheReadTokens: totals.totalCacheRead || 0,
+    totalCost: totals.totalCost || 0,
+    tokensByAgent: byAgent.map((r: any) => ({ agent: r.agent, tokens: r.tokens || 0, cost: r.cost || 0 })),
+    tokensByModel: byModel.map((r: any) => ({
+      model: r.model || 'unknown', agent: r.agent, tokens: r.tokens || 0,
+      inputTokens: r.inputTokens || 0, outputTokens: r.outputTokens || 0,
+      cacheCreationTokens: r.cacheCreationTokens || 0, cacheReadTokens: r.cacheReadTokens || 0,
+    })),
     activeAgents: agents.map((r: any) => r.agent),
   }
 }

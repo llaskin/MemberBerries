@@ -25,6 +25,14 @@ function formatTokens(n: number): string {
   return String(n)
 }
 
+function formatCost(n: number): string {
+  if (n <= 0) return '$0.00'
+  if (n < 0.01) return '<$0.01'
+  if (n < 1) return `$${n.toFixed(2)}`
+  if (n < 100) return `$${n.toFixed(2)}`
+  return `$${n.toFixed(0)}`
+}
+
 function agentColor(agent: string): string {
   return AGENTS[agent as AgentId]?.color || '#888'
 }
@@ -64,27 +72,60 @@ export function AnalyticsView() {
         ))}
       </div>
 
-      {/* Summary cards */}
+      {/* Cost + Token summary cards */}
       <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-ax-elevated rounded-xl border border-ax-border p-5">
+          <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Estimated Cost</div>
+          <div className="text-2xl font-bold text-ax-text-primary">{formatCost(data.totalCost)}</div>
+          <div className="font-mono text-micro text-ax-text-tertiary mt-1">{data.totalSessions} sessions</div>
+        </div>
+        <div className="bg-ax-elevated rounded-xl border border-ax-border p-5">
+          <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Total Tokens</div>
+          <div className="text-2xl font-bold text-ax-text-primary">{formatTokens(data.totalTokens)}</div>
+          <div className="font-mono text-micro text-ax-text-tertiary mt-1">
+            {formatTokens(data.totalInputTokens)} in · {formatTokens(data.totalOutputTokens)} out
+          </div>
+        </div>
         <div className="bg-ax-elevated rounded-xl border border-ax-border p-5">
           <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Avg Tokens / Session</div>
           <div className="text-2xl font-bold text-ax-text-primary">{formatTokens(data.avgTokensPerSession)}</div>
         </div>
         <div className="bg-ax-elevated rounded-xl border border-ax-border p-5">
-          <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Total Tokens</div>
-          <div className="text-2xl font-bold text-ax-text-primary">{formatTokens(data.totalTokens)}</div>
-          <div className="font-mono text-micro text-ax-text-tertiary mt-1">{data.totalSessions} sessions</div>
-        </div>
-        <div className="bg-ax-elevated rounded-xl border border-ax-border p-5">
-          <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Active Sessions</div>
-          <div className="text-2xl font-bold text-ax-text-primary">{data.totalSessions}</div>
-        </div>
-        <div className="bg-ax-elevated rounded-xl border border-ax-border p-5">
-          <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Active Agents</div>
-          <div className="text-2xl font-bold text-ax-text-primary">{data.activeAgents.length}</div>
-          <div className="font-mono text-micro text-ax-text-tertiary mt-1 truncate" title={data.activeAgents.map(a => AGENTS[a as AgentId]?.name || a).join(', ')}>
-            {data.activeAgents.map(a => AGENTS[a as AgentId]?.name || a).join(', ')}
+          <div className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-1">Cache Tokens</div>
+          <div className="text-2xl font-bold text-ax-text-primary">{formatTokens(data.totalCacheCreationTokens + data.totalCacheReadTokens)}</div>
+          <div className="font-mono text-micro text-ax-text-tertiary mt-1">
+            {formatTokens(data.totalCacheCreationTokens)} created · {formatTokens(data.totalCacheReadTokens)} read
           </div>
+        </div>
+      </div>
+
+      {/* Cost by Agent */}
+      <div className="bg-ax-elevated rounded-xl border border-ax-border p-5 mb-4">
+        <h4 className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-3">Cost by Agent</h4>
+        <div className="space-y-2">
+          {data.tokensByAgent.filter(a => a.cost > 0).map(a => {
+            const maxCost = Math.max(...data.tokensByAgent.map(x => x.cost), 0.01)
+            return (
+              <div key={a.agent} className="flex items-center gap-2">
+                <img src={AGENTS[a.agent as AgentId]?.icon} alt="" className="w-4 h-4 rounded-sm shrink-0" />
+                <span className="font-mono text-small text-ax-text-secondary w-28 shrink-0 truncate" title={AGENTS[a.agent as AgentId]?.name || a.agent}>
+                  {AGENTS[a.agent as AgentId]?.name || a.agent}
+                </span>
+                <div className="flex-1 h-4 bg-ax-sunken rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{
+                    width: `${Math.max(2, Math.round((a.cost / maxCost) * 100))}%`,
+                    background: agentColor(a.agent),
+                  }} />
+                </div>
+                <span className="font-mono text-micro text-ax-text-tertiary w-16 truncate" title={`$${a.cost.toFixed(4)}`}>
+                  {formatCost(a.cost)}
+                </span>
+              </div>
+            )
+          })}
+          {data.tokensByAgent.every(a => a.cost === 0) && (
+            <p className="text-small text-ax-text-tertiary italic">Cost data available after session re-indexing</p>
+          )}
         </div>
       </div>
 

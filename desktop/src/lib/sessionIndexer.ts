@@ -350,6 +350,25 @@ function indexSessionAnalytics(sessionId: string, projectId: string): void {
     return
   }
 
+  // Calculate cost using pricing module (async, but we store what we can)
+  let estimatedCost: number | null = null
+  if (parsed.dominantModel) {
+    try {
+      const { fetchPricing, findModelPricing, calculateCost } = await import('./pricing')
+      const pricing = await fetchPricing()
+      const modelPricing = findModelPricing(pricing, parsed.dominantModel)
+      if (modelPricing) {
+        estimatedCost = calculateCost(
+          parsed.estimatedInputTokens,
+          parsed.estimatedOutputTokens,
+          parsed.cacheCreationTokens,
+          parsed.cacheReadTokens,
+          modelPricing,
+        )
+      }
+    } catch { /* pricing fetch failed — leave cost null */ }
+  }
+
   // Update session with analytics
   db.prepare(`
     UPDATE sessions SET
@@ -361,7 +380,9 @@ function indexSessionAnalytics(sessionId: string, projectId: string): void {
       estimated_input_tokens = ?,
       estimated_output_tokens = ?,
       estimated_cost_usd = ?,
-      estimated_total_tokens = ? + ?,
+      estimated_total_tokens = ? + ? + ? + ?,
+      cache_creation_tokens = ?,
+      cache_read_tokens = ?,
       heuristic_summary = ?,
       heatstrip_json = ?,
       tool_calls_json = ?,
@@ -377,9 +398,13 @@ function indexSessionAnalytics(sessionId: string, projectId: string): void {
     parsed.errors,
     parsed.estimatedInputTokens,
     parsed.estimatedOutputTokens,
-    parsed.estimatedCostUsd,
+    estimatedCost,
     parsed.estimatedInputTokens,
     parsed.estimatedOutputTokens,
+    parsed.cacheCreationTokens,
+    parsed.cacheReadTokens,
+    parsed.cacheCreationTokens,
+    parsed.cacheReadTokens,
     parsed.heuristicSummary,
     JSON.stringify(parsed.heatStrip),
     JSON.stringify(parsed.toolCalls),
