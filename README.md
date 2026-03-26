@@ -76,23 +76,6 @@ All data is read-only — Agent Sessions never modifies your agent data files.
 - No shell spawning or terminal access.
 - See `docs/data-flow-diagram.md` for the full data flow.
 
-## Nightly Rollups (Optional)
-
-Agent Sessions can generate AI-powered daily summaries of your activity using the Claude CLI:
-
-```bash
-# Install the CLI
-npm install -g .
-
-# Run a rollup for all agents
-memberberries rollup --project agent-sessions
-
-# Or for a specific agent
-memberberries rollup --project claude-sessions
-```
-
-Rollups are stored locally in `~/.memberberries/workspaces/*/episodes/`. Only redacted session summaries are sent to the Anthropic API during rollup generation.
-
 ## Development
 
 ```bash

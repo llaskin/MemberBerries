@@ -4,24 +4,17 @@
 
 MemberBerries is a local-first dashboard for tracking AI coding agent activity across Claude Code, Codex, Cursor, and GitHub Copilot. It shows what you worked on, token usage analytics, and lets you drill into session details.
 
-**Core features:** Agent Sessions (Day/Sessions views) + Analytics (token charts by agent/model) + Optional nightly rollups via Claude CLI.
+**Core features:** Agent Sessions (Day/Sessions views) + Analytics (token charts by agent/model).
 
 ## Architecture
 
 ```
 MemberBerries/
-├── cli/              # Shell scripts — rollup engine
 ├── desktop/          # React + Vite — the web dashboard
-├── protocol.md       # Injected into Claude as system prompt
 └── docs/             # Design specs, plans, data flow diagram
 
 ~/.axon/
-├── sessions.db            # SQLite — all agent sessions indexed here
-├── workspaces/{project}/
-│   ├── state.md           # Current context snapshot
-│   ├── episodes/          # Nightly rollups
-│   ├── dendrites/         # Raw input signals
-│   └── config.yaml        # Per-workspace config
+├── sessions.db       # SQLite — all agent sessions indexed here
 ```
 
 ## Desktop App (desktop/)
@@ -49,9 +42,8 @@ MemberBerries/
 ## Security
 
 - All data stays local. Express server binds to 127.0.0.1 only.
-- No terminal/shell spawning. No remote URLs. No telemetry.
+- No terminal/shell spawning. No remote URLs. No telemetry. No API calls.
 - Secrets redacted before display (API keys, tokens, JWTs, connection strings).
-- Rollup agent has no tool access (cannot read local files).
 - See `docs/data-flow-diagram.md` for full data flow.
 
 ## Design Principles
