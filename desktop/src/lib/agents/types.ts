@@ -4,13 +4,14 @@ export interface AgentInfo {
   id: AgentId
   name: string
   color: string
+  icon: string
 }
 
 export const AGENTS: Record<AgentId, AgentInfo> = {
-  claude: { id: 'claude', name: 'Claude Code', color: '#D97706' },
-  codex: { id: 'codex', name: 'Codex', color: '#10B981' },
-  cursor: { id: 'cursor', name: 'Cursor', color: '#6366F1' },
-  copilot: { id: 'copilot', name: 'GitHub Copilot', color: '#8B5CF6' },
+  claude: { id: 'claude', name: 'Claude Code', color: '#D97706', icon: '/agent-claude.png' },
+  codex: { id: 'codex', name: 'Codex', color: '#10B981', icon: '/agent-codex.png' },
+  cursor: { id: 'cursor', name: 'Cursor', color: '#6366F1', icon: '/agent-cursor.png' },
+  copilot: { id: 'copilot', name: 'GitHub Copilot', color: '#8B5CF6', icon: '/agent-copilot.png' },
 }
 
 export interface AgentAdapter {

@@ -373,10 +373,10 @@ function SessionCard({ session, expanded, onToggle, onExpandSession }: {
             <AlertCircle size={10} /> {(s as SessionSummary).errors}
           </span>
         )}
-        {(s as any).agent && (s as any).agent !== 'claude' && (
+        {(s as any).agent && (
           <span className="font-mono text-micro flex items-center gap-1 px-1.5 py-0.5 bg-ax-sunken rounded"
             style={{ color: AGENTS[(s as any).agent as AgentId]?.color }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: AGENTS[(s as any).agent as AgentId]?.color }} />
+            <img src={AGENTS[(s as any).agent as AgentId]?.icon} alt="" className="w-3.5 h-3.5 rounded-sm" />
             {AGENTS[(s as any).agent as AgentId]?.name || (s as any).agent}
           </span>
         )}
@@ -1050,7 +1050,7 @@ export function SessionsView() {
                 className={`px-2 py-0.5 font-mono text-[10px] rounded flex items-center gap-1 transition-colors
                   ${agentFilter === a.id ? 'bg-ax-elevated text-ax-text-primary shadow-sm' : 'text-ax-text-tertiary hover:text-ax-text-secondary'}`}
               >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: a.color }} />
+                <img src={(AGENTS as any)[a.id]?.icon} alt="" className="w-3 h-3 rounded-sm" />
                 {a.name}
               </button>
             ))}

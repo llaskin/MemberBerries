@@ -94,7 +94,7 @@ export function AnalyticsView() {
         <div className="space-y-2">
           {data.tokensByAgent.map(a => (
             <div key={a.agent} className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: agentColor(a.agent) }} />
+              <img src={AGENTS[a.agent as AgentId]?.icon} alt="" className="w-4 h-4 rounded-sm shrink-0" />
               <span className="font-mono text-small text-ax-text-secondary w-28 shrink-0 truncate" title={AGENTS[a.agent as AgentId]?.name || a.agent}>
                 {AGENTS[a.agent as AgentId]?.name || a.agent}
               </span>
