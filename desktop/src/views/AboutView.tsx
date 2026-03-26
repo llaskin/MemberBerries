@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react'
-import { ExternalLink, Globe, ArrowLeft } from 'lucide-react'
+import { ExternalLink, ArrowLeft } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 
-type Tab = 'github' | 'website'
-
-const REPO_URL = 'https://github.com/AxonEmbodied/AXON'
-const WEBSITE_URL = 'https://robertmaye.co.uk'
+const REPO_URL = 'https://github.com/llaskin/MemberBerries'
 
 function GitHubIcon({ size = 20 }: { size?: number }) {
   return (
@@ -15,21 +12,36 @@ function GitHubIcon({ size = 20 }: { size?: number }) {
   )
 }
 
+function XIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+    </svg>
+  )
+}
+
+function LinkedInIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+    </svg>
+  )
+}
+
 function useReadme() {
   const [readme, setReadme] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('https://api.github.com/repos/AxonEmbodied/AXON/readme', {
+    fetch('https://api.github.com/repos/llaskin/MemberBerries/readme', {
       headers: { Accept: 'application/vnd.github.v3.html' },
     })
       .then(r => r.ok ? r.text() : null)
       .then(html => {
         if (html) {
-          // Fix relative image/gif paths → raw GitHub content URLs
           html = html.replace(
             /src="(docs\/[^"]+)"/g,
-            'src="https://raw.githubusercontent.com/AxonEmbodied/AXON/main/$1"'
+            'src="https://raw.githubusercontent.com/llaskin/MemberBerries/main/$1"'
           )
         }
         setReadme(html)
@@ -41,23 +53,85 @@ function useReadme() {
   return { readme, loading }
 }
 
-function GitHubTab() {
+export function AboutView() {
+  const goBack = useUIStore(s => s.goBack)
   const { readme, loading } = useReadme()
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div>
+      <button
+        onClick={goBack}
+        className="flex items-center gap-1.5 text-small text-ax-text-tertiary hover:text-ax-text-secondary transition-colors mb-4"
+      >
+        <ArrowLeft size={14} />
+        Back
+      </button>
+
+      <header className="mb-6">
+        <div className="flex items-center gap-3 mb-1">
+          <img src="/memberberries-icon.png" alt="" className="w-10 h-10 rounded" />
+          <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">
+            MemberBerries
+          </h1>
+        </div>
+        <p className="text-body text-ax-text-secondary">
+          Remember your sessions — local-first AI agent activity tracker
+        </p>
+        <div className="flex items-center gap-3 mt-3 flex-wrap">
+          <a
+            href="https://github.com/llaskin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
+          >
+            <GitHubIcon size={14} />
+            @llaskin
+            <ExternalLink size={10} />
+          </a>
+          <a
+            href="https://x.com/leolaskin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
+          >
+            <XIcon />
+            @leolaskin
+            <ExternalLink size={10} />
+          </a>
+          <a
+            href="https://www.linkedin.com/in/llaskin/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
+          >
+            <LinkedInIcon />
+            llaskin
+            <ExternalLink size={10} />
+          </a>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
+          >
+            <GitHubIcon size={14} />
+            MemberBerries
+            <ExternalLink size={10} />
+          </a>
+        </div>
+      </header>
+
       {/* Repo card */}
-      <div className="bg-ax-elevated rounded-xl border border-ax-border p-6">
+      <div className="bg-ax-elevated rounded-xl border border-ax-border p-6 mb-6">
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 rounded-xl bg-ax-sunken text-ax-text-primary">
             <GitHubIcon size={28} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-mono text-body text-ax-text-primary font-medium">AxonEmbodied/AXON</h3>
-            <p className="text-small text-ax-text-tertiary mt-0.5">Developer memory system — nightly AI rollups, morning briefings, decision traces</p>
+            <h3 className="font-mono text-body text-ax-text-primary font-medium">llaskin/MemberBerries</h3>
+            <p className="text-small text-ax-text-tertiary mt-0.5">Local-first dashboard for tracking AI coding agent activity</p>
           </div>
         </div>
-
         <div className="flex items-center gap-3 flex-wrap">
           <a
             href={REPO_URL}
@@ -78,15 +152,6 @@ function GitHubTab() {
             Issues
             <ExternalLink size={11} />
           </a>
-          <a
-            href={`${REPO_URL}/releases`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 font-mono text-micro px-4 py-2 rounded-lg border border-ax-border text-ax-text-secondary hover:bg-ax-sunken transition-colors"
-          >
-            Releases
-            <ExternalLink size={11} />
-          </a>
         </div>
       </div>
 
@@ -101,7 +166,6 @@ function GitHubTab() {
               <div className="h-6 bg-ax-sunken rounded w-2/3" />
               <div className="h-4 bg-ax-sunken rounded w-full" />
               <div className="h-4 bg-ax-sunken rounded w-5/6" />
-              <div className="h-4 bg-ax-sunken rounded w-3/4" />
             </div>
           ) : readme ? (
             <div
@@ -109,168 +173,15 @@ function GitHubTab() {
               dangerouslySetInnerHTML={{ __html: readme }}
             />
           ) : (
-            <p className="text-small text-ax-text-tertiary italic">Could not load README. <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="text-ax-brand hover:underline">View on GitHub</a></p>
+            <p className="text-small text-ax-text-tertiary italic">
+              Could not load README.{' '}
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="text-ax-brand hover:underline">
+                View on GitHub
+              </a>
+            </p>
           )}
         </div>
       </div>
-    </div>
-  )
-}
-
-function WebsiteTab() {
-  return (
-    <div className="space-y-6 animate-fade-in-up">
-      {/* Author card */}
-      <div className="bg-ax-elevated rounded-xl border border-ax-border p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 rounded-xl bg-ax-sunken text-ax-brand">
-            <Globe size={28} strokeWidth={1.5} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-serif italic text-h3 text-ax-text-primary">Robert Maye</h3>
-            <p className="text-small text-ax-text-tertiary mt-0.5">Creator of Axon</p>
-          </div>
-        </div>
-        <a
-          href={WEBSITE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 font-mono text-micro px-4 py-2 rounded-lg bg-ax-brand text-white hover:opacity-90 transition-opacity"
-        >
-          <Globe size={14} />
-          robertmaye.co.uk
-          <ExternalLink size={11} />
-        </a>
-      </div>
-
-      {/* Embedded website preview */}
-      <div className="bg-ax-elevated rounded-xl border border-ax-border overflow-hidden">
-        <div className="px-5 py-3 border-b border-ax-border-subtle flex items-center justify-between">
-          <span className="font-mono text-micro uppercase tracking-widest text-ax-text-tertiary">Preview</span>
-          <a
-            href={WEBSITE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-micro text-ax-text-tertiary hover:text-ax-brand transition-colors"
-          >
-            Open in browser <ExternalLink size={10} />
-          </a>
-        </div>
-        <div className="overflow-hidden" style={{ height: '500px' }}>
-          <iframe
-            src={WEBSITE_URL}
-            title="Robert Maye's website"
-            className="border-0 origin-top-left"
-            style={{
-              width: '166.67%',
-              height: '833px',
-              transform: 'scale(0.6)',
-            }}
-            sandbox="allow-scripts allow-same-origin"
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export function AboutView() {
-  const [tab, setTab] = useState<Tab>('github')
-  const goBack = useUIStore(s => s.goBack)
-
-  return (
-    <div>
-      {/* Back button */}
-      <button
-        onClick={goBack}
-        className="flex items-center gap-1.5 text-small text-ax-text-tertiary hover:text-ax-text-secondary transition-colors mb-4"
-      >
-        <ArrowLeft size={14} />
-        Back
-      </button>
-
-      <header className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <img src="/branding/axon-mark-light.png" alt="" className="w-8 h-8 rounded [filter:invert(0.2)_sepia(1)_saturate(2)_hue-rotate(350deg)]" />
-          <h1 className="font-serif italic text-display text-ax-text-primary tracking-tight">
-            Axon
-          </h1>
-        </div>
-        <p className="text-body text-ax-text-secondary">
-          Developer memory system — protocol over platform
-        </p>
-        <div className="flex items-center gap-3 mt-3 flex-wrap">
-          <a
-            href="https://x.com/RobMaye5"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
-          >
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            @RobMaye5
-            <ExternalLink size={10} />
-          </a>
-          <a
-            href="https://x.com/AXONEMBODIED"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
-          >
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            @AXONEMBODIED
-            <ExternalLink size={10} />
-          </a>
-          <a
-            href="https://discord.gg/kMw4XKn7v7"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
-          >
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-            Discord
-            <ExternalLink size={10} />
-          </a>
-          <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 font-mono text-micro text-ax-text-tertiary hover:text-ax-text-secondary transition-colors"
-          >
-            <GitHubIcon size={14} />
-            GitHub
-            <ExternalLink size={10} />
-          </a>
-        </div>
-      </header>
-
-      {/* Tab switcher */}
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => setTab('github')}
-          className={`flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-mono text-small transition-all duration-200
-            ${tab === 'github'
-              ? 'bg-ax-elevated border-2 border-ax-text-primary text-ax-text-primary shadow-md'
-              : 'bg-ax-elevated border border-ax-border text-ax-text-secondary hover:bg-ax-sunken'
-            }`}
-        >
-          <GitHubIcon size={18} />
-          GitHub
-        </button>
-        <button
-          onClick={() => setTab('website')}
-          className={`flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-mono text-small transition-all duration-200
-            ${tab === 'website'
-              ? 'bg-ax-brand text-white shadow-md'
-              : 'bg-ax-elevated border border-ax-border text-ax-text-secondary hover:bg-ax-sunken'
-            }`}
-        >
-          <Globe size={18} strokeWidth={1.5} />
-          Website
-        </button>
-      </div>
-
-      {/* Tab content */}
-      {tab === 'github' ? <GitHubTab /> : <WebsiteTab />}
     </div>
   )
 }
