@@ -102,21 +102,15 @@ export function parseJsonlFile(filePath: string): ParsedSession | null {
           modelCounts.set(model, (modelCounts.get(model) || 0) + 1)
         }
 
-        // Usage metadata
+        // Usage metadata — prefer actual API usage over estimates
         const usage = msg.message?.usage || msg.usage
         if (usage) {
+          // input_tokens includes prompt tokens
           if (usage.input_tokens) inputTokens += usage.input_tokens
+          // cache tokens are additional input tokens (creation + reads)
+          if (usage.cache_creation_input_tokens) inputTokens += usage.cache_creation_input_tokens
+          if (usage.cache_read_input_tokens) inputTokens += usage.cache_read_input_tokens
           if (usage.output_tokens) outputTokens += usage.output_tokens
-        }
-
-        // Estimate tokens from content if no usage data
-        if (!usage && (msg.type === 'user' || msg.type === 'assistant')) {
-          const text = extractTextFromContent(msg.message?.content)
-          if (text) {
-            const tokens = estimateTokens(text)
-            if (msg.type === 'user') inputTokens += tokens
-            else outputTokens += tokens
-          }
         }
 
         // Tool use blocks

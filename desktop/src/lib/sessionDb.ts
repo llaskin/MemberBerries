@@ -261,7 +261,7 @@ export interface AnalyticsData {
 
 export function getAnalytics(since?: string): AnalyticsData {
   const db = getSessionDb()
-  const whereClause = since ? 'WHERE created_at >= ?' : ''
+  const whereClause = since ? 'WHERE modified_at >= ?' : ''
   const params = since ? [since] : []
 
   const totals = db.prepare(`
@@ -277,7 +277,7 @@ export function getAnalytics(since?: string): AnalyticsData {
 
   const byModel = db.prepare(`
     SELECT model, agent, COALESCE(SUM(estimated_total_tokens), 0) as tokens
-    FROM sessions ${since ? 'WHERE model IS NOT NULL AND created_at >= ?' : 'WHERE model IS NOT NULL'}
+    FROM sessions ${since ? 'WHERE model IS NOT NULL AND modified_at >= ?' : 'WHERE model IS NOT NULL'}
     GROUP BY model, agent ORDER BY tokens DESC
   `).all(...params) as any[]
 
