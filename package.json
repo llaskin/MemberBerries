@@ -17,15 +17,5 @@
     "codex",
     "cursor",
     "copilot"
-  ],
-  "bin": {
-    "memberberries": "cli/axon"
-  },
-  "files": [
-    "cli/",
-    "protocol.md"
-  ],
-  "scripts": {
-    "prepublishOnly": "bash -n cli/axon"
-  }
+  ]
 }

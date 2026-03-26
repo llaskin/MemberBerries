@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-# axon-todo — Per-project TODO list management (SQLite-backed)
-# Delegates to desktop/src/lib/todoCli.ts via tsx
-
-set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-exec npx --prefix "$SCRIPT_DIR/../desktop" tsx "$SCRIPT_DIR/../desktop/src/lib/todoCli.ts" "$@"
