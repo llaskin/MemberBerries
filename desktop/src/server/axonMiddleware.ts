@@ -2063,6 +2063,49 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         } catch (err) {
           console.error('[Axon] Session indexer failed:', err)
         }
+
+        // Discover non-Claude agent sessions
+        try {
+          const { registerAdapter, getAllAdapters } = await import('../lib/agents/registry')
+          const { claudeAdapter } = await import('../lib/agents/claude')
+          const { codexAdapter } = await import('../lib/agents/codex')
+          const { cursorAdapter } = await import('../lib/agents/cursor')
+          const { copilotAdapter } = await import('../lib/agents/copilot')
+          const { upsertAgentSessions } = await import('../lib/sessionDb')
+
+          registerAdapter(claudeAdapter)
+          registerAdapter(codexAdapter)
+          registerAdapter(cursorAdapter)
+          registerAdapter(copilotAdapter)
+
+          for (const adapter of getAllAdapters()) {
+            if (adapter.info.id === 'claude') continue // already indexed above
+            if (!adapter.isInstalled()) continue
+            const sessions = adapter.discoverSessions()
+            if (sessions.length > 0) upsertAgentSessions(sessions)
+          }
+        } catch (err) {
+          console.error('[Axon] Agent discovery failed:', err)
+        }
+      }
+
+      // GET /api/axon/sessions/installed-agents
+      if (url === '/api/axon/sessions/installed-agents') {
+        try {
+          const { registerAdapter, getInstalledAgents } = await import('../lib/agents/registry')
+          const { claudeAdapter } = await import('../lib/agents/claude')
+          const { codexAdapter } = await import('../lib/agents/codex')
+          const { cursorAdapter } = await import('../lib/agents/cursor')
+          const { copilotAdapter } = await import('../lib/agents/copilot')
+          registerAdapter(claudeAdapter)
+          registerAdapter(codexAdapter)
+          registerAdapter(cursorAdapter)
+          registerAdapter(copilotAdapter)
+          res.end(JSON.stringify({ agents: getInstalledAgents() }))
+        } catch {
+          res.end(JSON.stringify({ agents: [] }))
+        }
+        return
       }
 
       // GET /api/axon/sessions/status
@@ -2193,14 +2236,16 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/axon/sessions?project={name}
-      const sessionsMatch = url.match(/^\/api\/axon\/sessions(\?project=([^&]+))?(&|$)/)
+      const sessionsMatch = url.match(/^\/api\/axon\/sessions(\?|&|$)/)
       if (sessionsMatch) {
-        // Reuse pre-resolved project name from above (avoids re-reading config.yaml)
-        const projectName = resolvedProjectName || (sessionsMatch[2] ? decodeURIComponent(sessionsMatch[2]) : undefined)
+        // Parse query params
+        const urlObj = new URL(url, 'http://localhost')
+        const projectName = resolvedProjectName || urlObj.searchParams.get('project') || undefined
+        const agentParam = urlObj.searchParams.get('agent') || undefined
         try {
           const { getSessions, getIndexStatus } = await import('../lib/sessionDb')
           const { getAllSessionMeta } = await import('../lib/sessionMeta')
-          const sessions = getSessions(projectName)
+          const sessions = getSessions(projectName, agentParam)
           const meta = getAllSessionMeta()
           const enriched = sessions.map(s => ({
             ...s,
