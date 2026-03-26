@@ -1,15 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { useProjectStore } from '@/store/projectStore'
 import { useUIStore } from '@/store/uiStore'
 import { useSessions, useSessionSearch, useSessionsByProject, usePromptTimeline, type SessionSummary, type SearchResult } from '@/hooks/useSessions'
-import { Search, Globe, FolderOpen, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, Terminal as TerminalIcon, AlertCircle, Play, LayoutGrid, List, Maximize, Minimize } from 'lucide-react'
-import { CanvasView } from './agent/CanvasView'
-import { ZoneTree } from './agent/ZoneTree'
-import { useCanvasState } from './agent/useCanvasState'
-import { useDebugStore } from '@/store/debugStore'
-import { TILE_W, TILE_H, ZONE_COLORS, snap, type TileState, type ZoneState } from './agent/zoneReducers'
-
-type SessionsMode = 'canvas' | 'list'
+import { Search, Globe, FolderOpen, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, AlertCircle } from 'lucide-react'
+import { AnalyticsView } from './AnalyticsView'
+import { AGENTS, type AgentId } from '@/lib/agents/types'
 
 // Heat strip colors — warm palette from design system
 const HEAT_COLORS: Record<string, string> = {
@@ -471,7 +465,7 @@ function RelatedSessions({ sessionId, projectName, onSelect }: {
 
 // --- Day View (groups sessions by calendar day) ---
 
-type ViewMode = 'sessions' | 'day' | 'projects'
+type ViewMode = 'sessions' | 'day' | 'analytics'
 
 interface DayGroup {
   date: string
@@ -958,220 +952,58 @@ function generateDemoData(): {
 // --- Main Sessions View ---
 
 export function SessionsView() {
-  const activeProject = null // Always show all sessions — no project filter
-  const [mode, setMode] = useState<SessionsMode>('list')
   const [viewMode, setViewMode] = useState<ViewMode>('day')
-  const [fullscreen, setFullscreen] = useState(false)
-  const [demoSessions, setDemoSessions] = useState<SessionSummary[]>([])
 
-  // Escape exits fullscreen
-  useEffect(() => {
-    if (!fullscreen) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [fullscreen])
-
-  // Always fetch sessions (needed for both modes)
-  const { sessions: realSessions, indexStatus, loading, error, refetch } = useSessions(activeProject)
-
-  // Merge real + demo sessions
-  const sessions = useMemo(() => {
-    if (demoSessions.length === 0) return realSessions
-    const realIds = new Set(realSessions.map(s => s.id))
-    return [...realSessions, ...demoSessions.filter(d => !realIds.has(d.id))]
-  }, [realSessions, demoSessions])
-
-  // Canvas state — only fetches layout when in canvas mode
-  const canvasState = useCanvasState(mode === 'canvas' ? activeProject : null)
-
-  // Demo mode toggle
-  const populateDemo = useCallback(() => {
-    const { zones, tiles, sessions: fakeSessions } = generateDemoData()
-    // Merge into existing canvas state
-    canvasState.dispatchZones({ type: 'SET_ALL', zones: [...canvasState.zones, ...zones] })
-    canvasState.dispatchTiles({ type: 'SET_ALL', tiles: [...canvasState.tiles, ...tiles] })
-    setDemoSessions(fakeSessions)
-  }, [canvasState])
-
-  const clearDemo = useCallback(() => {
-    // Remove demo zones and tiles
-    const cleanZones = canvasState.zones.filter(z => !z.id.startsWith('demo-'))
-    const cleanTiles = canvasState.tiles.filter(t => !t.sessionId.startsWith('demo-'))
-    canvasState.dispatchZones({ type: 'SET_ALL', zones: cleanZones })
-    canvasState.dispatchTiles({ type: 'SET_ALL', tiles: cleanTiles })
-    setDemoSessions([])
-  }, [canvasState])
-
-  // Register demo debug action (only for dev mode)
-  const hasDemoData = demoSessions.length > 0
-  useEffect(() => {
-    if (!import.meta.env.DEV) return
-    const id = 'demo-canvas'
-    useDebugStore.getState().register({
-      id,
-      label: 'Demo Canvas Data',
-      active: hasDemoData,
-      toggle: () => {
-        if (hasDemoData) clearDemo()
-        else populateDemo()
-      },
-    })
-    return () => useDebugStore.getState().unregister(id)
-  }, [hasDemoData, populateDemo, clearDemo])
+  const { sessions, indexStatus, loading, error } = useSessions(null)
 
   return (
-    <div className="flex h-full">
-      {/* Zone tree sidebar — canvas mode only, hidden in fullscreen */}
-      {mode === 'canvas' && activeProject && !fullscreen && (
-        <div className="hidden sm:block w-56 shrink-0 border-r border-ax-border bg-ax-elevated overflow-hidden">
-          <ZoneTree
-            sessions={sessions}
-            tiles={canvasState.tiles}
-            zones={canvasState.zones}
-            createZone={() => canvasState.createZone()}
-            renameZone={canvasState.renameZone}
-            deleteZone={canvasState.deleteZone}
-            assignTileZone={canvasState.assignTileZone}
-            addTile={canvasState.addTile}
-            removeTile={canvasState.removeTile}
-          />
-        </div>
-      )}
-
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header bar with mode toggle — hidden in fullscreen */}
-        {fullscreen ? (
-          <button
-            onClick={() => setFullscreen(false)}
-            className="absolute top-3 right-3 z-20 p-2 bg-ax-elevated/80 backdrop-blur-sm border border-ax-border-subtle rounded-lg
-              text-ax-text-tertiary hover:text-ax-text-primary transition-colors shadow-sm"
-            aria-label="Exit fullscreen"
-          >
-            <Minimize size={14} />
-          </button>
-        ) : null}
-        <div className={`shrink-0 flex items-center gap-2 px-4 py-1 border-b border-ax-border-subtle bg-ax-base ${fullscreen ? 'hidden' : ''}`}>
-          <div className="flex items-center gap-0.5 bg-ax-sunken rounded-md p-0.5">
+    <div className="flex-1 flex flex-col min-w-0">
+      {/* Header bar */}
+      <div className="shrink-0 flex items-center gap-2 px-4 py-1 border-b border-ax-border-subtle bg-ax-base">
+        {/* View mode tabs (Day / Sessions / Analytics) */}
+        <div className="flex items-center gap-0.5 bg-ax-sunken rounded-md p-0.5">
+          {(['day', 'sessions', 'analytics'] as ViewMode[]).map(vm => (
             <button
-              onClick={() => setMode('canvas')}
-              className={`flex items-center gap-1 px-2 py-0.5 font-mono text-[10px] rounded transition-colors
-                ${mode === 'canvas'
+              key={vm}
+              onClick={() => setViewMode(vm)}
+              className={`px-2 py-0.5 font-mono text-[10px] rounded transition-colors
+                ${viewMode === vm
                   ? 'bg-ax-elevated text-ax-text-primary shadow-sm'
                   : 'text-ax-text-tertiary hover:text-ax-text-secondary'
                 }`}
             >
-              <LayoutGrid size={10} />
-              Canvas
+              {vm === 'day' ? 'Day' : vm === 'sessions' ? 'Sessions' : 'Analytics'}
             </button>
-            <button
-              onClick={() => setMode('list')}
-              className={`flex items-center gap-1 px-2 py-0.5 font-mono text-[10px] rounded transition-colors
-                ${mode === 'list'
-                  ? 'bg-ax-elevated text-ax-text-primary shadow-sm'
-                  : 'text-ax-text-tertiary hover:text-ax-text-secondary'
-                }`}
-            >
-              <List size={10} />
-              List
-            </button>
-          </div>
-          {/* View mode tabs (Day / Sessions) */}
-          <div className="flex items-center gap-0.5 bg-ax-sunken rounded-md p-0.5">
-            {(['day', 'sessions'] as ViewMode[]).map(vm => (
-              <button
-                key={vm}
-                onClick={() => { setViewMode(vm); if (mode === 'canvas' && vm !== 'sessions') setMode('list') }}
-                className={`px-2 py-0.5 font-mono text-[10px] rounded capitalize transition-colors
-                  ${viewMode === vm
-                    ? 'bg-ax-elevated text-ax-text-primary shadow-sm'
-                    : 'text-ax-text-tertiary hover:text-ax-text-secondary'
-                  }`}
-              >
-                {vm === 'day' ? 'Day' : 'Sessions'}
-              </button>
-            ))}
-          </div>
-          <h1 className="font-serif italic text-[16px] text-ax-text-primary">
-            Sessions
-          </h1>
-          {activeProject && (
-            <span className="font-mono text-[10px] text-ax-text-tertiary truncate max-w-[140px]">
-              {activeProject}
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            <span className="font-mono text-[10px] text-ax-text-ghost">
-              {sessions.length}
-            </span>
-            {mode === 'canvas' && (
-              <button
-                onClick={() => setFullscreen(true)}
-                className="p-1 text-ax-text-ghost hover:text-ax-text-primary transition-colors"
-                aria-label="Fullscreen canvas"
-                title="Fullscreen canvas"
-              >
-                <Maximize size={12} />
-              </button>
-            )}
-          </div>
+          ))}
         </div>
+        <h1 className="font-serif italic text-[16px] text-ax-text-primary">
+          Agent Sessions
+        </h1>
+        <div className="ml-auto">
+          <span className="font-mono text-[10px] text-ax-text-ghost">
+            {sessions.length}
+          </span>
+        </div>
+      </div>
 
-        {/* Content */}
-        {mode === 'canvas' ? (
-          activeProject && canvasState.loaded ? (
-            <CanvasView
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-8 py-10">
+          {viewMode === 'sessions' && (
+            <SessionList
               sessions={sessions}
-              tiles={canvasState.tiles}
-              zones={canvasState.zones}
-              viewport={canvasState.viewport}
-              zoneLayouts={canvasState.zoneLayouts}
-              tilePositionMap={canvasState.tilePositionMap}
-              dispatchTiles={canvasState.dispatchTiles}
-              dispatchZones={canvasState.dispatchZones}
-              setViewport={canvasState.setViewport}
-              scheduleSave={canvasState.scheduleSave}
-              immediateSave={canvasState.immediateSave}
-              reorgActive={canvasState.reorgActive}
-              onReorganize={() => canvasState.reorganize(sessions)}
-              onReorgApply={canvasState.applyReorg}
-              onReorgCancel={canvasState.cancelReorg}
-              onOpenSession={() => { /* Terminal removed for security */ }}
-              onRemoveTile={canvasState.removeTile}
-              onSessionRenamed={refetch}
-              onAddTile={canvasState.addTile}
-              onAssignTileZone={canvasState.assignTileZone}
-              activeProject={activeProject}
+              indexStatus={indexStatus}
+              loading={loading}
+              error={error}
             />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <LayoutGrid size={20} className="text-ax-text-ghost mx-auto mb-2" />
-                <p className="text-micro text-ax-text-tertiary">
-                  {activeProject ? 'Loading canvas...' : 'Select a project to view sessions.'}
-                </p>
-              </div>
-            </div>
-          )
-        ) : (
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-3xl mx-auto px-8 py-10">
-              {viewMode === 'sessions' && (
-                <SessionList
-                  sessions={sessions}
-                  indexStatus={indexStatus}
-                  loading={loading}
-                  error={error}
-                />
-              )}
-              {viewMode === 'day' && (
-                <DayViewList sessions={sessions} />
-              )}
-              {/* Projects view removed — all sessions shown by default */}
-            </div>
-          </div>
-        )}
+          )}
+          {viewMode === 'day' && (
+            <DayViewList sessions={sessions} />
+          )}
+          {viewMode === 'analytics' && (
+            <AnalyticsView />
+          )}
+        </div>
       </div>
     </div>
   )
