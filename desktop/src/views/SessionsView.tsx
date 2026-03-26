@@ -954,7 +954,7 @@ function generateDemoData(): {
 // --- Main Sessions View ---
 
 export function SessionsView() {
-  const activeProject = useProjectStore((s) => s.activeProject)
+  const activeProject = null // Always show all sessions — no project filter
   const [mode, setMode] = useState<SessionsMode>('list')
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [fullscreen, setFullscreen] = useState(false)
@@ -1073,9 +1073,9 @@ export function SessionsView() {
               List
             </button>
           </div>
-          {/* View mode tabs (Day / Sessions / Projects) */}
+          {/* View mode tabs (Day / Sessions) */}
           <div className="flex items-center gap-0.5 bg-ax-sunken rounded-md p-0.5">
-            {(['day', 'sessions', 'projects'] as ViewMode[]).map(vm => (
+            {(['day', 'sessions'] as ViewMode[]).map(vm => (
               <button
                 key={vm}
                 onClick={() => { setViewMode(vm); if (mode === 'canvas' && vm !== 'sessions') setMode('list') }}
@@ -1085,7 +1085,7 @@ export function SessionsView() {
                     : 'text-ax-text-tertiary hover:text-ax-text-secondary'
                   }`}
               >
-                {vm === 'day' ? 'Day' : vm === 'sessions' ? 'Sessions' : 'Projects'}
+                {vm === 'day' ? 'Day' : 'Sessions'}
               </button>
             ))}
           </div>
@@ -1164,9 +1164,7 @@ export function SessionsView() {
               {viewMode === 'day' && (
                 <DayViewList sessions={sessions} />
               )}
-              {viewMode === 'projects' && (
-                <ProjectViewList />
-              )}
+              {/* Projects view removed — all sessions shown by default */}
             </div>
           </div>
         )}

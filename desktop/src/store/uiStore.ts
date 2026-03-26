@@ -42,7 +42,7 @@ function getInitialTheme(): 'light' | 'dark' {
 export const useUIStore = create<UIStore>((set) => ({
   sidebarOpen: true,
   theme: getInitialTheme(),
-  activeView: 'timeline',
+  activeView: 'agents',
   previousView: null,
   viewSwipeDirection: 'none',
   selectedRollup: null,

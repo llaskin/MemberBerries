@@ -12,15 +12,10 @@ const HINT_STORAGE_KEY = 'axon-shortcut-hints-dismissed'
 const HINT_DURATION_MS = 4000
 
 const mainNav: { id: ViewId; label: string; icon: typeof Clock }[] = [
-  { id: 'morning', label: 'Morning', icon: Coffee },
-  { id: 'agents', label: 'Agents', icon: Brain },
-  { id: 'timeline', label: 'Timeline', icon: Clock },
-  { id: 'source', label: 'Source', icon: GitBranch },
-  { id: 'todos', label: 'Tasks', icon: CheckSquare },
+  { id: 'agents', label: 'Sessions', icon: Brain },
 ]
 
 const utilNav: { id: ViewId; label: string; icon: typeof Clock }[] = [
-  { id: 'terminal', label: 'Terminal', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 

@@ -36,9 +36,9 @@ import { useProjectStore } from '@/store/projectStore'
 // Navigating between any of them slides the strip — same
 // animation everywhere. Sub-views overlay on top.
 
-const STRIP: ViewId[] = ['morning', 'agents', 'timeline', 'source', 'todos', 'terminal', 'settings']
-const FULL_BLEED = new Set<ViewId>(['agents', 'terminal'])
-const EDITORIAL = new Set<ViewId>(['morning', 'agents', 'timeline'])
+const STRIP: ViewId[] = ['agents', 'settings']
+const FULL_BLEED = new Set<ViewId>(['agents'])
+const EDITORIAL = new Set<ViewId>([])
 
 /* ── Strip pane — lazy-mounted, slides horizontally ──────────── */
 
@@ -75,11 +75,7 @@ function StripPane({
 
 /* ── Editorial navigation pills ──────────────────────────────── */
 
-const EDITORIAL_NAV = [
-  { id: 'morning' as ViewId, label: 'Morning', Icon: Coffee },
-  { id: 'agents' as ViewId, label: 'Agents', Icon: Brain },
-  { id: 'timeline' as ViewId, label: 'Timeline', Icon: Clock },
-]
+const EDITORIAL_NAV: { id: ViewId; label: string; Icon: typeof Brain }[] = []
 
 function EditorialNav({ activeView }: { activeView: ViewId }) {
   const setView = useUIStore(s => s.setView)
@@ -126,21 +122,7 @@ function ViewRouter() {
   const swipeDir = useUIStore(s => s.viewSwipeDirection)
   const { projects, activeProject } = useProjectStore()
 
-  // Genesis guard: redirect to onboarding for uninitialized projects
-  // Only depends on specific project fields, not the entire projects array reference
-  const activeProjectData = projects.find(p => p.name === activeProject)
-  const episodeCount = activeProjectData?.episodeCount ?? -1
-  const genesisStatus = activeProjectData?.genesisStatus
-  useEffect(() => {
-    if (!activeProject || episodeCount < 0) return
-    if (episodeCount === 0 && !ALLOWED_UNINITIALIZED.has(activeView)) {
-      if (genesisStatus === 'running') {
-        setView('genesis-progress')
-      } else {
-        setView('onboarding')
-      }
-    }
-  }, [activeProject, episodeCount, genesisStatus, activeView, setView])
+  // Genesis guard disabled — sessions view is always available
 
   const loading = useProjectStore(s => s.loading)
   const noProjects = !loading && projects.length === 0
@@ -164,28 +146,7 @@ function ViewRouter() {
   const swipeContainerRef = useRef<HTMLDivElement>(null)
   useSwipeNavigation(swipeContainerRef)
 
-  // Empty state: no projects after loading completes
-  if (noProjects && activeView !== 'settings' && activeView !== 'onboarding') {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center max-w-sm mx-auto px-6">
-          <h2 className="font-serif italic text-h2 text-ax-text-primary mb-2">Welcome to Axon</h2>
-          <p className="text-body text-ax-text-secondary mb-6">
-            Add your first project to get started with nightly rollups, morning briefings, and decision traces.
-          </p>
-          <button
-            onClick={() => setView('onboarding')}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg
-              bg-ax-brand text-white font-mono text-small
-              hover:bg-ax-brand-hover transition-colors"
-          >
-            <Plus size={14} />
-            Add your first project
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // No empty state needed — sessions view always has content from ~/.claude/
 
   return (
     <div ref={swipeContainerRef} className="relative h-full w-full overflow-hidden">
@@ -199,12 +160,7 @@ function ViewRouter() {
             active={activeView === viewId}
             offsetPercent={(i - currentIdx) * 100}
           >
-            {viewId === 'morning' && <MorningView />}
             {viewId === 'agents' && <SessionsView />}
-            {viewId === 'timeline' && <TimelineView />}
-            {viewId === 'source' && <SourceControlView />}
-            {viewId === 'todos' && <TodosView />}
-            {viewId === 'terminal' && <AgentView />}
             {viewId === 'settings' && <SettingsView />}
           </StripPane>
         ))}
