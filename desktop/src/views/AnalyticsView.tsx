@@ -145,8 +145,8 @@ export function AnalyticsView() {
                   background: agentColor(a.agent),
                 }} />
               </div>
-              <span className="font-mono text-micro text-ax-text-tertiary w-16 truncate" title={a.tokens > 0 ? a.tokens.toLocaleString() + ' tokens' : 'N/A'}>
-                {a.tokens > 0 ? formatTokens(a.tokens) : 'N/A'}
+              <span className="font-mono text-micro text-ax-text-tertiary w-20 truncate" title={a.tokens > 0 ? a.tokens.toLocaleString() + ' tokens' + (a.agent === 'copilot' ? ' (estimated)' : '') : 'N/A'}>
+                {a.tokens > 0 ? formatTokens(a.tokens) + (a.agent === 'copilot' ? '*' : '') : 'N/A'}
               </span>
             </div>
           ))}
@@ -175,6 +175,11 @@ export function AnalyticsView() {
           </div>
         </div>
       )}
+
+      {/* Footnote */}
+      <p className="font-mono text-micro text-ax-text-ghost mt-6">
+        * Token counts estimated from prompt text length. GitHub Copilot does not report actual token usage.
+      </p>
     </div>
   )
 }

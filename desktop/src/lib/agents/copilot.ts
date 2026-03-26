@@ -29,18 +29,25 @@ export const copilotAdapter: AgentAdapter = {
       const stat = statSync(historyPath)
       const mtime = stat.mtime.toISOString()
 
+      // Estimate tokens from prompt text length (~4 chars per token)
+      // These are rough estimates — Copilot doesn't report actual token usage
+      const estimatedInputTokens = history.reduce((sum, prompt) => sum + Math.ceil(prompt.length / 4), 0)
+      // Assume output is roughly 2x input for code generation
+      const estimatedOutputTokens = estimatedInputTokens * 2
+      const estimatedTotalTokens = estimatedInputTokens + estimatedOutputTokens
+
       return [{
         id: 'copilot:history',
         agent: 'copilot' as const,
-        model: null,
+        model: 'estimated*',
         firstPrompt: history[0] || null,
-        summary: `${history.length} CLI command${history.length !== 1 ? 's' : ''}`,
-        heuristicSummary: `${history.length} CLI command${history.length !== 1 ? 's' : ''}`,
+        summary: `${history.length} CLI command${history.length !== 1 ? 's' : ''} (tokens estimated*)`,
+        heuristicSummary: `${history.length} CLI command${history.length !== 1 ? 's' : ''} (tokens estimated*)`,
         messageCount: history.length,
         toolCallCount: 0,
-        estimatedInputTokens: 0,
-        estimatedOutputTokens: 0,
-        estimatedTotalTokens: 0,
+        estimatedInputTokens,
+        estimatedOutputTokens,
+        estimatedTotalTokens,
         createdAt: null,
         modifiedAt: mtime,
         projectPath: null,
