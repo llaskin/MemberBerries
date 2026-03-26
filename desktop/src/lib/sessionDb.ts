@@ -51,6 +51,7 @@ export function isSessionDbReady(): boolean {
 function runMigrations(db: Database.Database): void {
   const version = (db.pragma('user_version', { simple: true }) as number) || 0
   if (version < 1) migrateV1(db)
+  if (version < 2) migrateV2(db)
 }
 
 function migrateV1(db: Database.Database): void {
@@ -117,6 +118,23 @@ function migrateV1(db: Database.Database): void {
   `)
 }
 
+function migrateV2(db: Database.Database): void {
+  db.exec(`
+    ALTER TABLE sessions ADD COLUMN agent TEXT NOT NULL DEFAULT 'claude';
+    ALTER TABLE sessions ADD COLUMN model TEXT;
+    ALTER TABLE sessions ADD COLUMN estimated_total_tokens INTEGER NOT NULL DEFAULT 0;
+    CREATE INDEX IF NOT EXISTS idx_sessions_agent ON sessions(agent);
+    CREATE INDEX IF NOT EXISTS idx_sessions_agent_modified ON sessions(agent, modified_at);
+    CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(created_at);
+  `)
+  // Backfill estimated_total_tokens from existing input+output
+  db.exec(`
+    UPDATE sessions SET estimated_total_tokens = estimated_input_tokens + estimated_output_tokens
+    WHERE estimated_total_tokens = 0 AND (estimated_input_tokens > 0 OR estimated_output_tokens > 0);
+  `)
+  db.pragma('user_version = 2')
+}
+
 // --- Query helpers ---
 
 export interface SessionRow {
@@ -145,6 +163,9 @@ export interface SessionRow {
   indexed_at: string
   analytics_indexed: number
   is_sidechain: number
+  agent: string
+  model: string | null
+  estimated_total_tokens: number
 }
 
 export interface FileTouchedRow {
@@ -177,16 +198,16 @@ export interface IndexStatus {
   ready: boolean
 }
 
-export function getSessions(projectName?: string): SessionRow[] {
+export function getSessions(projectName?: string, agent?: string): SessionRow[] {
   const db = getSessionDb()
-  if (projectName) {
-    return db.prepare(
-      'SELECT * FROM sessions WHERE project_name = ? ORDER BY modified_at DESC'
-    ).all(projectName) as SessionRow[]
-  }
-  return db.prepare(
-    'SELECT * FROM sessions ORDER BY modified_at DESC'
-  ).all() as SessionRow[]
+  let sql = 'SELECT * FROM sessions'
+  const conditions: string[] = []
+  const params: any[] = []
+  if (projectName) { conditions.push('project_name = ?'); params.push(projectName) }
+  if (agent) { conditions.push('agent = ?'); params.push(agent) }
+  if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ')
+  sql += ' ORDER BY modified_at DESC'
+  return db.prepare(sql).all(...params) as SessionRow[]
 }
 
 export function getSessionById(id: string): SessionRow | null {
@@ -223,4 +244,93 @@ export function getIndexStatus(): IndexStatus {
   const analytics = (db.prepare('SELECT COUNT(*) as c FROM sessions WHERE analytics_indexed = 1').get() as { c: number }).c
   const fts = (db.prepare('SELECT COUNT(*) as c FROM session_fts').get() as { c: number }).c
   return { totalSessions: total, analyticsIndexed: analytics, ftsIndexed: fts, ready: true }
+}
+
+// --- Analytics ---
+
+export interface AnalyticsData {
+  totalTokens: number
+  avgTokensPerSession: number
+  totalSessions: number
+  tokensByAgent: { agent: string; tokens: number }[]
+  tokensByModel: { model: string; agent: string; tokens: number }[]
+  activeAgents: string[]
+}
+
+export function getAnalytics(since?: string): AnalyticsData {
+  const db = getSessionDb()
+  const whereClause = since ? 'WHERE created_at >= ?' : ''
+  const params = since ? [since] : []
+
+  const totals = db.prepare(`
+    SELECT COUNT(*) as cnt, COALESCE(SUM(estimated_total_tokens), 0) as total
+    FROM sessions ${whereClause}
+  `).get(...params) as any
+
+  const byAgent = db.prepare(`
+    SELECT agent, COALESCE(SUM(estimated_total_tokens), 0) as tokens
+    FROM sessions ${whereClause}
+    GROUP BY agent ORDER BY tokens DESC
+  `).all(...params) as any[]
+
+  const byModel = db.prepare(`
+    SELECT model, agent, COALESCE(SUM(estimated_total_tokens), 0) as tokens
+    FROM sessions ${since ? 'WHERE model IS NOT NULL AND created_at >= ?' : 'WHERE model IS NOT NULL'}
+    GROUP BY model, agent ORDER BY tokens DESC
+  `).all(...params) as any[]
+
+  const agents = db.prepare(`
+    SELECT DISTINCT agent FROM sessions ${whereClause}
+  `).all(...params) as any[]
+
+  return {
+    totalTokens: totals.total || 0,
+    avgTokensPerSession: totals.cnt > 0 ? Math.round((totals.total || 0) / totals.cnt) : 0,
+    totalSessions: totals.cnt || 0,
+    tokensByAgent: byAgent.map((r: any) => ({ agent: r.agent, tokens: r.tokens || 0 })),
+    tokensByModel: byModel.map((r: any) => ({ model: r.model || 'unknown', agent: r.agent, tokens: r.tokens || 0 })),
+    activeAgents: agents.map((r: any) => r.agent),
+  }
+}
+
+// --- Agent session upsert ---
+
+export function upsertAgentSessions(sessions: import('./agents/types').AgentSession[]): void {
+  const db = getSessionDb()
+  const stmt = db.prepare(`
+    INSERT INTO sessions (
+      id, project_id, project_path, project_name,
+      first_prompt, summary, heuristic_summary, message_count,
+      tool_call_count, bash_commands, errors,
+      estimated_input_tokens, estimated_output_tokens, estimated_total_tokens,
+      estimated_cost_usd, git_branch, heatstrip_json, tool_calls_json, git_commands_json,
+      created_at, modified_at, indexed_at, agent, model, analytics_indexed
+    ) VALUES (
+      ?, ?, ?, ?,
+      ?, ?, ?, ?,
+      ?, ?, ?,
+      ?, ?, ?,
+      NULL, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, 1
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      modified_at = excluded.modified_at,
+      message_count = excluded.message_count,
+      estimated_total_tokens = excluded.estimated_total_tokens,
+      indexed_at = excluded.indexed_at
+  `)
+
+  const tx = db.transaction(() => {
+    for (const s of sessions) {
+      stmt.run(
+        s.id, s.agent, s.projectPath, s.projectName || s.agent,
+        s.firstPrompt, s.summary, s.heuristicSummary, s.messageCount,
+        s.toolCallCount, s.bashCommands, s.errors,
+        s.estimatedInputTokens, s.estimatedOutputTokens, s.estimatedTotalTokens,
+        s.gitBranch, s.heatstripJson, s.toolCallsJson, s.gitCommandsJson,
+        s.createdAt, s.modifiedAt, new Date().toISOString(), s.agent, s.model,
+      )
+    }
+  })
+  tx()
 }
