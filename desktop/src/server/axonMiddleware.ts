@@ -596,7 +596,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/rollups
-      const rollupsMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/rollups$/)
+      const rollupsMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/rollups$/)
       if (rollupsMatch) {
         const project = decodeURIComponent(rollupsMatch[1])
         const epDir = join(AXON_HOME, 'workspaces', project, 'episodes')
@@ -618,7 +618,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/state
-      const stateMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/state$/)
+      const stateMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/state$/)
       if (stateMatch) {
         const project = decodeURIComponent(stateMatch[1])
         try {
@@ -631,7 +631,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/config
-      const configMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/config$/)
+      const configMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/config$/)
       if (configMatch && req.method === 'GET') {
         const project = decodeURIComponent(configMatch[1])
         try {
@@ -699,7 +699,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // DELETE /api/mb/projects/:name?mode=archive|delete
-      const deleteMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)(?:\?|$)/)
+      const deleteMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)(?:\?|$)/)
       if (deleteMatch && req.method === 'DELETE') {
         const project = decodeURIComponent(deleteMatch[1])
         const mode = new URL(url, 'http://localhost').searchParams.get('mode') || 'archive'
@@ -738,7 +738,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/stream
-      const streamMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/stream$/)
+      const streamMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/stream$/)
       if (streamMatch) {
         const project = decodeURIComponent(streamMatch[1])
         try {
@@ -751,7 +751,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/mornings
-      const morningsMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/mornings$/)
+      const morningsMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/mornings$/)
       if (morningsMatch) {
         const project = decodeURIComponent(morningsMatch[1])
         const mDir = join(AXON_HOME, 'workspaces', project, 'mornings')
@@ -771,7 +771,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/gource — serve gource.png if it exists
-      const gourceMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/gource$/)
+      const gourceMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/gource$/)
       if (gourceMatch) {
         const project = decodeURIComponent(gourceMatch[1])
         const gourcePath = join(AXON_HOME, 'workspaces', project, 'gource.png')
@@ -790,7 +790,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       // ── TODO ENDPOINTS (SQLite-backed via todoDb.ts) ────────
 
       // GET /api/mb/projects/:name/todos
-      const todosGetMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/todos$/)
+      const todosGetMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/todos$/)
       if (todosGetMatch && req.method === 'GET') {
         const project = decodeURIComponent(todosGetMatch[1])
         try {
@@ -806,7 +806,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // POST /api/mb/projects/:name/todos — add item
-      const todosPostMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/todos$/)
+      const todosPostMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/todos$/)
       if (todosPostMatch && req.method === 'POST') {
         const project = decodeURIComponent(todosPostMatch[1])
         const body = await new Promise<string>((resolve) => {
@@ -823,7 +823,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // PATCH /api/mb/projects/:name/todos/:id — update item
-      const todosPatchMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/todos\/(\d+)$/)
+      const todosPatchMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/todos\/(\d+)$/)
       if (todosPatchMatch && req.method === 'PATCH') {
         const project = decodeURIComponent(todosPatchMatch[1])
         const id = parseInt(todosPatchMatch[2], 10)
@@ -866,7 +866,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       // ── JOBS ENDPOINTS (SQLite-backed via jobsDb.ts) ─────
 
       // GET /api/mb/projects/:name/jobs
-      const jobsGetMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/jobs(\?.*)?$/)
+      const jobsGetMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/jobs(\?.*)?$/)
       if (jobsGetMatch && req.method === 'GET') {
         const project = decodeURIComponent(jobsGetMatch[1])
         const params = new URLSearchParams(jobsGetMatch[2]?.slice(1) || '')
@@ -889,7 +889,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/jobs/summary
-      const jobsSummaryMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/jobs\/summary(\?.*)?$/)
+      const jobsSummaryMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/jobs\/summary(\?.*)?$/)
       if (jobsSummaryMatch && req.method === 'GET') {
         const project = decodeURIComponent(jobsSummaryMatch[1])
         const params = new URLSearchParams(jobsSummaryMatch[2]?.slice(1) || '')
@@ -908,7 +908,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/cron — cron/launchd status
-      const cronMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/cron$/)
+      const cronMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/cron$/)
       if (cronMatch && req.method === 'GET') {
         const project = decodeURIComponent(cronMatch[1])
         try {
@@ -939,7 +939,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // POST /api/mb/projects/:name/cron — install/remove cron
-      const cronPostMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/cron$/)
+      const cronPostMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/cron$/)
       if (cronPostMatch && req.method === 'POST') {
         const project = decodeURIComponent(cronPostMatch[1])
         const body = await new Promise<string>((resolve) => {
@@ -979,7 +979,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/jobs/:id/watch — SSE live feed of a running job's Claude session
-      const jobWatchMatch = url.match(/^\/api\/axon\/projects\/([^/]+)\/jobs\/(\d+)\/watch$/)
+      const jobWatchMatch = url.match(/^\/api\/mb\/projects\/([^/]+)\/jobs\/(\d+)\/watch$/)
       if (jobWatchMatch && req.method === 'GET') {
         const project = decodeURIComponent(jobWatchMatch[1])
         const jobId = parseInt(jobWatchMatch[2], 10)
@@ -1404,7 +1404,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/filesearch?project=name&q=query
-      const filesearchMatch = url.match(/^\/api\/axon\/filesearch\?project=([^&]+)&q=(.*)$/)
+      const filesearchMatch = url.match(/^\/api\/mb\/filesearch\?project=([^&]+)&q=(.*)$/)
       if (filesearchMatch) {
         const project = decodeURIComponent(filesearchMatch[1])
         const query = decodeURIComponent(filesearchMatch[2]).toLowerCase()
@@ -1436,7 +1436,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/filetree?project=name
-      const filetreeMatch = url.match(/^\/api\/axon\/filetree\?project=([^&]+)(?:&path=(.*))?$/)
+      const filetreeMatch = url.match(/^\/api\/mb\/filetree\?project=([^&]+)(?:&path=(.*))?$/)
       if (filetreeMatch) {
         const project = decodeURIComponent(filetreeMatch[1])
         const relPath = filetreeMatch[2] ? decodeURIComponent(filetreeMatch[2]) : ''
@@ -1476,7 +1476,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/gitstatus?project=name
-      const gitstatusMatch = url.match(/^\/api\/axon\/gitstatus\?project=([^&]+)$/)
+      const gitstatusMatch = url.match(/^\/api\/mb\/gitstatus\?project=([^&]+)$/)
       if (gitstatusMatch) {
         const project = decodeURIComponent(gitstatusMatch[1])
 
@@ -1677,7 +1677,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 
       // --- Canvas Layout Endpoints ---
 
-      const canvasMatch = url.match(/^\/api\/axon\/canvas-layout\?project=([^&]+)$/)
+      const canvasMatch = url.match(/^\/api\/mb\/canvas-layout\?project=([^&]+)$/)
       if (canvasMatch) {
         const project = decodeURIComponent(canvasMatch[1])
 
@@ -1745,7 +1745,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       // --- Git Endpoints ---
 
       // GET /api/mb/projects/:name/git/info
-      const gitInfoMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/info$/)
+      const gitInfoMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/info$/)
       if (gitInfoMatch) {
         const project = decodeURIComponent(gitInfoMatch[1])
         let cwd = process.cwd()
@@ -1790,7 +1790,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/git/log?limit=50
-      const gitLogMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/log(\?.*)?$/)
+      const gitLogMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/log(\?.*)?$/)
       if (gitLogMatch && req.method === 'GET') {
         const project = decodeURIComponent(gitLogMatch[1])
         const params = new URLSearchParams(gitLogMatch[2]?.slice(1) || '')
@@ -1823,7 +1823,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/git/branches
-      const gitBranchesMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/branches$/)
+      const gitBranchesMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/branches$/)
       if (gitBranchesMatch) {
         const project = decodeURIComponent(gitBranchesMatch[1])
         let cwd = process.cwd()
@@ -1850,7 +1850,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/projects/:name/git/tags
-      const gitTagsMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/tags$/)
+      const gitTagsMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/tags$/)
       if (gitTagsMatch) {
         const project = decodeURIComponent(gitTagsMatch[1])
         let cwd = process.cwd()
@@ -1878,7 +1878,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // POST /api/mb/projects/:name/git/tag — create and push a tag
-      const gitTagCreateMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/tag$/)
+      const gitTagCreateMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/tag$/)
       if (gitTagCreateMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitTagCreateMatch[1])
         const body = await new Promise<string>((resolve) => {
@@ -1919,7 +1919,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // POST /api/mb/projects/:name/git/push
-      const gitPushMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/push$/)
+      const gitPushMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/push$/)
       if (gitPushMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitPushMatch[1])
         let cwd = process.cwd()
@@ -1948,7 +1948,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // POST /api/mb/projects/:name/git/pull
-      const gitPullMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/pull$/)
+      const gitPullMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/pull$/)
       if (gitPullMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitPullMatch[1])
         let cwd = process.cwd()
@@ -1969,7 +1969,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // POST /api/mb/projects/:name/git/checkout
-      const gitCheckoutMatch = url.match(/^\/api\/axon\/projects\/([^/?]+)\/git\/checkout$/)
+      const gitCheckoutMatch = url.match(/^\/api\/mb\/projects\/([^/?]+)\/git\/checkout$/)
       if (gitCheckoutMatch && req.method === 'POST') {
         const project = decodeURIComponent(gitCheckoutMatch[1])
         const body = await new Promise<string>((resolve) => {
@@ -2007,7 +2007,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       // Terminal endpoints removed for security — no shell spawning
 
       // PATCH /api/mb/sessions/:id/meta
-      const metaPatchMatch = url.match(/^\/api\/axon\/sessions\/([^/?]+)\/meta$/)
+      const metaPatchMatch = url.match(/^\/api\/mb\/sessions\/([^/?]+)\/meta$/)
       if (metaPatchMatch && req.method === 'PATCH') {
         const sessionId = decodeURIComponent(metaPatchMatch[1])
         const body = await new Promise<string>((resolve) => {
@@ -2134,7 +2134,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/sessions/search?q={query}
-      const sessionSearchMatch = url.match(/^\/api\/axon\/sessions\/search\?q=(.+)$/)
+      const sessionSearchMatch = url.match(/^\/api\/mb\/sessions\/search\?q=(.+)$/)
       if (sessionSearchMatch) {
         const query = decodeURIComponent(sessionSearchMatch[1])
         try {
@@ -2156,7 +2156,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/sessions/{id}/prompts — prompt timeline from history.jsonl
-      const promptsMatch = url.match(/^\/api\/axon\/sessions\/([0-9a-f-]{36})\/prompts$/)
+      const promptsMatch = url.match(/^\/api\/mb\/sessions\/([0-9a-f-]{36})\/prompts$/)
       if (promptsMatch) {
         const sessionId = promptsMatch[1]
         try {
@@ -2227,7 +2227,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/sessions/{id}
-      const sessionDetailMatch = url.match(/^\/api\/axon\/sessions\/([0-9a-f-]{36})$/)
+      const sessionDetailMatch = url.match(/^\/api\/mb\/sessions\/([0-9a-f-]{36})$/)
       if (sessionDetailMatch) {
         const id = sessionDetailMatch[1]
         try {
@@ -2250,7 +2250,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/sessions?project={name}
-      const sessionsMatch = url.match(/^\/api\/axon\/sessions(\?|&|$)/)
+      const sessionsMatch = url.match(/^\/api\/mb\/sessions(\?|&|$)/)
       if (sessionsMatch) {
         // Parse query params
         const urlObj = new URL(url, 'http://localhost')
