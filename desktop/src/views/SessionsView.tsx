@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import { useUIStore } from '@/store/uiStore'
-import { useSessions, useSessionSearch, type SessionSummary, type SearchResult } from '@/hooks/useSessions'
+import { useSessions, useSessionSearch, useSessionsByProject, usePromptTimeline, type SessionSummary, type SearchResult } from '@/hooks/useSessions'
 import { Search, Globe, FolderOpen, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, Terminal as TerminalIcon, AlertCircle, Play, LayoutGrid, List, Maximize, Minimize } from 'lucide-react'
 import { CanvasView } from './agent/CanvasView'
 import { ZoneTree } from './agent/ZoneTree'
@@ -369,7 +369,263 @@ function SessionCard({ session, expanded, onToggle }: {
       {expanded && (
         <div onClick={(e) => e.stopPropagation()}>
           <SessionDetailPanel sessionId={s.id} />
+          <PromptTimeline sessionId={s.id} />
+          <RelatedSessions sessionId={s.id} projectName={s.project_name} onSelect={onToggle} />
         </div>
+      )}
+    </div>
+  )
+}
+
+// --- Prompt Timeline (from history.jsonl) ---
+
+function PromptTimeline({ sessionId }: { sessionId: string }) {
+  const { prompts, loading } = usePromptTimeline(sessionId)
+  const [showAll, setShowAll] = useState(false)
+
+  if (loading) return <div className="mt-3 text-small text-ax-text-tertiary">Loading prompts...</div>
+  if (prompts.length === 0) return <div className="mt-3 text-small text-ax-text-tertiary italic">No prompt timeline available</div>
+
+  const visible = showAll ? prompts : prompts.slice(0, 5)
+  const remaining = prompts.length - 5
+
+  return (
+    <div className="mt-4">
+      <h4 className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-2">Prompt Timeline</h4>
+      <div className="border-l-2 border-ax-border-subtle pl-3 space-y-2">
+        {visible.map((p, i) => (
+          <div key={i} className="relative">
+            <div className={`absolute -left-[13px] top-1 w-2 h-2 rounded-full ${i < 3 ? 'bg-ax-brand' : 'bg-ax-text-ghost'}`} />
+            <div className="font-mono text-micro text-ax-text-tertiary">
+              {new Date(p.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="text-small text-ax-text-secondary mt-0.5 leading-relaxed">
+              {renderRedactedText(p.display.length > 200 ? p.display.slice(0, 200) + '...' : p.display)}
+            </div>
+          </div>
+        ))}
+        {!showAll && remaining > 0 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="text-small text-ax-text-tertiary hover:text-ax-brand transition-colors"
+          >
+            <em>+ {remaining} more...</em> <span className="text-ax-brand font-medium">Show all</span>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function renderRedactedText(text: string): React.ReactNode {
+  const parts = text.split(/(\[REDACTED_[A-Z_]+\])/g)
+  return parts.map((part, i) =>
+    part.startsWith('[REDACTED_') ? (
+      <span key={i} className="bg-ax-sunken text-ax-text-ghost px-1 py-px rounded font-mono text-micro">
+        {part}
+      </span>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  )
+}
+
+// --- Related Sessions ---
+
+function RelatedSessions({ sessionId, projectName, onSelect }: {
+  sessionId: string
+  projectName: string
+  onSelect: () => void
+}) {
+  const { sessions } = useSessions(null)
+  const related = useMemo(() =>
+    (sessions || [])
+      .filter(s => s.project_name === projectName && s.id !== sessionId)
+      .sort((a, b) => (b.modified_at || '').localeCompare(a.modified_at || ''))
+      .slice(0, 5),
+    [sessions, projectName, sessionId]
+  )
+
+  if (related.length === 0) return null
+
+  return (
+    <div className="mt-4 pt-3 border-t border-ax-border-subtle">
+      <h4 className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider mb-2">Related Sessions</h4>
+      <div className="flex gap-1.5 flex-wrap">
+        {related.map(s => (
+          <span
+            key={s.id}
+            className="bg-ax-sunken px-2 py-1 rounded-md font-mono text-micro cursor-pointer hover:bg-ax-elevated transition-colors border border-ax-border-subtle"
+          >
+            <span className="text-ax-brand font-semibold">#{s.id.slice(0, 8)}</span>
+            {' '}
+            <span className="text-ax-text-tertiary">
+              {s.modified_at ? new Date(s.modified_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// --- Day View (groups sessions by calendar day) ---
+
+type ViewMode = 'sessions' | 'day' | 'projects'
+
+interface DayGroup {
+  date: string
+  label: string
+  sessions: SessionSummary[]
+  sessionCount: number
+  totalCost: number
+  projects: Set<string>
+}
+
+function groupByDay(sessions: SessionSummary[]): DayGroup[] {
+  const dayMap = new Map<string, DayGroup>()
+
+  for (const s of sessions) {
+    let dateKey: string
+    let label: string
+
+    if (s.created_at) {
+      const d = new Date(s.created_at)
+      dateKey = d.toISOString().slice(0, 10)
+      label = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    } else {
+      dateKey = 'unknown'
+      label = 'Unknown date'
+    }
+
+    const existing = dayMap.get(dateKey) || {
+      date: dateKey,
+      label,
+      sessions: [],
+      sessionCount: 0,
+      totalCost: 0,
+      projects: new Set<string>(),
+    }
+    existing.sessions.push(s)
+    existing.sessionCount++
+    existing.totalCost += s.estimated_cost_usd || 0
+    if (s.project_name) existing.projects.add(s.project_name)
+    dayMap.set(dateKey, existing)
+  }
+
+  return Array.from(dayMap.values())
+    .sort((a, b) => b.date.localeCompare(a.date))
+}
+
+function DayViewList({ sessions }: { sessions: SessionSummary[] }) {
+  const days = useMemo(() => groupByDay(sessions), [sessions])
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(() => new Set(days[0] ? [days[0].date] : []))
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const toggleDay = (date: string) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
+  }
+
+  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
+
+  return (
+    <div className="space-y-4">
+      {days.map(day => (
+        <div key={day.date}>
+          <button
+            onClick={() => toggleDay(day.date)}
+            className="w-full flex items-center justify-between p-3 rounded-lg bg-ax-elevated border border-ax-border hover:border-ax-border-strong transition-colors text-left"
+          >
+            <div>
+              <div className="font-serif italic text-h4 text-ax-text-primary">{day.label}</div>
+              <div className="font-mono text-micro text-ax-text-tertiary mt-1">
+                {day.sessionCount} session{day.sessionCount !== 1 ? 's' : ''} · {day.projects.size} project{day.projects.size !== 1 ? 's' : ''} · {formatCost(day.totalCost)}
+              </div>
+            </div>
+            <ChevronDown
+              size={14}
+              className={`text-ax-text-tertiary transition-transform duration-200 ${expandedDays.has(day.date) ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {expandedDays.has(day.date) && (
+            <div className="mt-2 ml-3 pl-3 border-l-2 border-ax-border-subtle space-y-3">
+              {day.sessions
+                .sort((a, b) => (b.modified_at || '').localeCompare(a.modified_at || ''))
+                .map(s => (
+                  <SessionCard
+                    key={s.id}
+                    session={s}
+                    expanded={expandedId === s.id}
+                    onToggle={() => toggleExpand(s.id)}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+      ))}
+      {days.length === 0 && (
+        <p className="text-small text-ax-text-tertiary text-center py-8">No sessions found</p>
+      )}
+    </div>
+  )
+}
+
+// --- Project View (groups sessions by project) ---
+
+function ProjectViewList() {
+  const { projects, loading } = useSessionsByProject()
+  const [expandedProject, setExpandedProject] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
+
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="h-20 bg-ax-sunken rounded-xl" />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {projects.map(project => (
+        <div key={project.projectName}>
+          <button
+            onClick={() => setExpandedProject(expandedProject === project.projectName ? null : project.projectName)}
+            className="w-full p-4 rounded-lg bg-ax-elevated border border-ax-border hover:border-ax-border-strong transition-colors text-left"
+          >
+            <div className="font-serif italic text-h4 text-ax-text-primary">{project.projectName}</div>
+            <div className="font-mono text-micro text-ax-text-ghost mt-0.5 truncate">{project.projectPath}</div>
+            <div className="font-mono text-micro text-ax-text-tertiary mt-1">
+              {project.sessions.length} session{project.sessions.length !== 1 ? 's' : ''} · {formatCost(project.totalCost)} · Last active: {project.lastActive ? timeAgo(project.lastActive) : 'unknown'}
+            </div>
+          </button>
+          {expandedProject === project.projectName && (
+            <div className="mt-2 ml-3 pl-3 border-l-2 border-ax-border-subtle space-y-3">
+              {project.sessions
+                .sort((a, b) => (b.modified_at || '').localeCompare(a.modified_at || ''))
+                .map(s => (
+                  <SessionCard
+                    key={s.id}
+                    session={s}
+                    expanded={expandedId === s.id}
+                    onToggle={() => toggleExpand(s.id)}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+      ))}
+      {projects.length === 0 && (
+        <p className="text-small text-ax-text-tertiary text-center py-8">No projects found</p>
       )}
     </div>
   )
@@ -699,7 +955,8 @@ function generateDemoData(): {
 
 export function SessionsView() {
   const activeProject = useProjectStore((s) => s.activeProject)
-  const [mode, setMode] = useState<SessionsMode>('canvas')
+  const [mode, setMode] = useState<SessionsMode>('list')
+  const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [fullscreen, setFullscreen] = useState(false)
   const [demoSessions, setDemoSessions] = useState<SessionSummary[]>([])
 
@@ -816,6 +1073,22 @@ export function SessionsView() {
               List
             </button>
           </div>
+          {/* View mode tabs (Day / Sessions / Projects) */}
+          <div className="flex items-center gap-0.5 bg-ax-sunken rounded-md p-0.5">
+            {(['day', 'sessions', 'projects'] as ViewMode[]).map(vm => (
+              <button
+                key={vm}
+                onClick={() => { setViewMode(vm); if (mode === 'canvas' && vm !== 'sessions') setMode('list') }}
+                className={`px-2 py-0.5 font-mono text-[10px] rounded capitalize transition-colors
+                  ${viewMode === vm
+                    ? 'bg-ax-elevated text-ax-text-primary shadow-sm'
+                    : 'text-ax-text-tertiary hover:text-ax-text-secondary'
+                  }`}
+              >
+                {vm === 'day' ? 'Day' : vm === 'sessions' ? 'Sessions' : 'Projects'}
+              </button>
+            ))}
+          </div>
           <h1 className="font-serif italic text-[16px] text-ax-text-primary">
             Sessions
           </h1>
@@ -880,12 +1153,20 @@ export function SessionsView() {
         ) : (
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-3xl mx-auto px-8 py-10">
-              <SessionList
-                sessions={sessions}
-                indexStatus={indexStatus}
-                loading={loading}
-                error={error}
-              />
+              {viewMode === 'sessions' && (
+                <SessionList
+                  sessions={sessions}
+                  indexStatus={indexStatus}
+                  loading={loading}
+                  error={error}
+                />
+              )}
+              {viewMode === 'day' && (
+                <DayViewList sessions={sessions} />
+              )}
+              {viewMode === 'projects' && (
+                <ProjectViewList />
+              )}
             </div>
           </div>
         )}
