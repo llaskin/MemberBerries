@@ -17,6 +17,9 @@ export interface SessionSummary {
   created_at: string | null
   modified_at: string | null
   analytics_indexed: number
+  agent: string
+  model: string | null
+  estimated_total_tokens: number
   tags: string[]
   pinned: boolean
   nickname: string | null

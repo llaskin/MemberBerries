@@ -12,7 +12,7 @@ const HINT_STORAGE_KEY = 'axon-shortcut-hints-dismissed'
 const HINT_DURATION_MS = 4000
 
 const mainNav: { id: ViewId; label: string; icon: typeof Clock }[] = [
-  { id: 'agents', label: 'Sessions', icon: Brain },
+  { id: 'agents', label: 'Agent Sessions', icon: Brain },
 ]
 
 const utilNav: { id: ViewId; label: string; icon: typeof Clock }[] = [

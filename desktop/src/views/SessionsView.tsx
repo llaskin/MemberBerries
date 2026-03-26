@@ -331,6 +331,13 @@ function SessionCard({ session, expanded, onToggle, onExpandSession }: {
             <AlertCircle size={10} /> {(s as SessionSummary).errors}
           </span>
         )}
+        {(s as any).agent && (s as any).agent !== 'claude' && (
+          <span className="font-mono text-micro flex items-center gap-1 px-1.5 py-0.5 bg-ax-sunken rounded"
+            style={{ color: AGENTS[(s as any).agent as AgentId]?.color }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: AGENTS[(s as any).agent as AgentId]?.color }} />
+            {AGENTS[(s as any).agent as AgentId]?.name || (s as any).agent}
+          </span>
+        )}
         {'project_name' in s && s.project_name && (
           <span className="font-mono text-micro text-ax-text-tertiary ml-auto px-1.5 py-0.5 bg-ax-sunken rounded">
             {s.project_name}
@@ -953,8 +960,24 @@ function generateDemoData(): {
 
 export function SessionsView() {
   const [viewMode, setViewMode] = useState<ViewMode>('day')
+  const [agentFilter, setAgentFilter] = useState<string | null>(null)
+  const [installedAgents, setInstalledAgents] = useState<{ id: string; name: string; color: string }[]>([])
 
-  const { sessions, indexStatus, loading, error } = useSessions(null)
+  const { sessions: allSessions, indexStatus, loading, error } = useSessions(null)
+
+  // Fetch installed agents
+  useEffect(() => {
+    fetch('/api/axon/sessions/installed-agents')
+      .then(r => r.json())
+      .then(d => setInstalledAgents(d.agents || []))
+      .catch(() => {})
+  }, [])
+
+  // Filter sessions by agent
+  const sessions = useMemo(() => {
+    if (!agentFilter) return allSessions
+    return allSessions.filter(s => (s as any).agent === agentFilter)
+  }, [allSessions, agentFilter])
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
@@ -976,6 +999,27 @@ export function SessionsView() {
             </button>
           ))}
         </div>
+        {/* Agent filter pills (Day/Sessions only) */}
+        {viewMode !== 'analytics' && installedAgents.length > 0 && (
+          <div className="flex items-center gap-0.5 bg-ax-sunken rounded-md p-0.5">
+            <button
+              onClick={() => setAgentFilter(null)}
+              className={`px-2 py-0.5 font-mono text-[10px] rounded transition-colors
+                ${!agentFilter ? 'bg-ax-elevated text-ax-text-primary shadow-sm' : 'text-ax-text-tertiary hover:text-ax-text-secondary'}`}
+            >All</button>
+            {installedAgents.map(a => (
+              <button
+                key={a.id}
+                onClick={() => setAgentFilter(agentFilter === a.id ? null : a.id)}
+                className={`px-2 py-0.5 font-mono text-[10px] rounded flex items-center gap-1 transition-colors
+                  ${agentFilter === a.id ? 'bg-ax-elevated text-ax-text-primary shadow-sm' : 'text-ax-text-tertiary hover:text-ax-text-secondary'}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: a.color }} />
+                {a.name}
+              </button>
+            ))}
+          </div>
+        )}
         <h1 className="font-serif italic text-[16px] text-ax-text-primary">
           Agent Sessions
         </h1>

@@ -28,6 +28,7 @@ function getArg(name: string): string | undefined {
 
 const workspace = getArg('workspace')
 const since = getArg('since')
+const agentFilter = getArg('agent') // 'claude', 'codex', 'all', etc.
 
 if (!workspace) {
   console.error('--workspace is required')
@@ -70,14 +71,27 @@ const db = new Database(dbPath, { readonly: true })
 
 // --- Query sessions since cutoff ---
 const sinceDate = since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-const sessions = db.prepare(`
-  SELECT id, project_name, project_path, first_prompt, heuristic_summary,
-         tool_call_count, files_touched_count, estimated_cost_usd,
-         tool_calls_json, created_at, modified_at, message_count, errors
-  FROM sessions
-  WHERE modified_at > ?
-  ORDER BY created_at ASC
-`).all(sinceDate) as any[]
+
+// Build query with optional agent filter (migration-aware)
+let query = `SELECT id, project_name, project_path, first_prompt, heuristic_summary,
+       tool_call_count, files_touched_count, estimated_cost_usd,
+       tool_calls_json, created_at, modified_at, message_count, errors
+  FROM sessions WHERE modified_at > ?`
+const queryParams: any[] = [sinceDate]
+
+// Check if agent column exists before filtering
+if (agentFilter && agentFilter !== 'all') {
+  try {
+    db.prepare('SELECT agent FROM sessions LIMIT 1').get()
+    query += ' AND agent = ?'
+    queryParams.push(agentFilter)
+  } catch {
+    // agent column doesn't exist yet — skip filter
+  }
+}
+query += ' ORDER BY created_at ASC'
+
+const sessions = db.prepare(query).all(...queryParams) as any[]
 
 if (sessions.length === 0) {
   console.log(`No sessions modified since ${sinceDate}`)
