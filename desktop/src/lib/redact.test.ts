@@ -58,13 +58,13 @@ describe('redactText', () => {
 
   // ── Connection strings ────────────────────────────────────
   it('redacts postgres connection strings', () => {
-    expect(redactText('postgres://admin:s3cret@db.host:5432/mydb')).toBe(
+    expect(redactText('postgres://testuser:testpass@example.invalid:5432/testdb')).toBe(
       '[REDACTED_CONNECTION_STRING]',
     );
   });
   it('redacts mongodb+srv connection strings', () => {
     expect(
-      redactText('mongodb+srv://user:pass@cluster.mongodb.net/db'),
+      redactText('mongodb+srv://testuser:testpass@example.invalid/testdb'),
     ).toBe('[REDACTED_CONNECTION_STRING]');
   });
 

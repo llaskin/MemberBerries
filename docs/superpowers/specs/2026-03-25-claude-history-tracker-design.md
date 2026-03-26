@@ -126,7 +126,7 @@ Implemented as a TypeScript module (`desktop/src/lib/redact.ts`) for consistency
 | Bearer/auth headers | `Bearer eyJ...`, `Authorization: ...` | `[REDACTED_AUTH]` |
 | JWTs | `eyJhbGci...` (base64.base64.base64) | `[REDACTED_JWT]` |
 | AWS keys | `AKIA...` (20 char) | `[REDACTED_AWS_KEY]` |
-| Connection strings | `postgres://user:pass@...`, `mongodb+srv://...` | `[REDACTED_CONNECTION_STRING]` |
+| Connection strings | `postgres://testuser:testpass@...`, `mongodb+srv://...` | `[REDACTED_CONNECTION_STRING]` |
 | Generic secrets | `password=...`, `secret=...`, `token=...` in URLs/env | `[REDACTED_SECRET]` |
 | Private keys | `-----BEGIN.*PRIVATE KEY-----` blocks | `[REDACTED_PRIVATE_KEY]` |
 | `.env` value patterns | `KEY=value` lines from pasted contents | `[REDACTED_ENV]` |
