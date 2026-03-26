@@ -576,6 +576,21 @@ function DayViewList({ sessions }: { sessions: SessionSummary[] }) {
 
   const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
 
+  // Navigate to a specific session: expand its day group, set it as expanded, scroll to it
+  const navigateToSession = useCallback((targetId: string) => {
+    // Find which day contains this session
+    for (const day of days) {
+      if (day.sessions.some(s => s.id === targetId)) {
+        setExpandedDays(prev => new Set([...prev, day.date]))
+        break
+      }
+    }
+    setExpandedId(targetId)
+    setTimeout(() => {
+      document.querySelector(`[data-session-id="${targetId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 150)
+  }, [days])
+
   return (
     <div className="space-y-4">
       {days.map(day => (
@@ -605,7 +620,7 @@ function DayViewList({ sessions }: { sessions: SessionSummary[] }) {
                     session={s}
                     expanded={expandedId === s.id}
                     onToggle={() => toggleExpand(s.id)}
-                    onExpandSession={(id) => setExpandedId(id)}
+                    onExpandSession={navigateToSession}
                   />
                 ))}
             </div>
@@ -705,6 +720,13 @@ function SessionList({ sessions, indexStatus, loading, error }: {
   const indexing = indexStatus.ready && indexStatus.analyticsIndexed < indexStatus.totalSessions
 
   const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
+
+  const navigateToSession = useCallback((targetId: string) => {
+    setExpandedId(targetId)
+    setTimeout(() => {
+      document.querySelector(`[data-session-id="${targetId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 150)
+  }, [])
 
   if (loading) {
     return (
@@ -808,7 +830,7 @@ function SessionList({ sessions, indexStatus, loading, error }: {
               session={r}
               expanded={expandedId === r.id}
               onToggle={() => toggleExpand(r.id)}
-              onExpandSession={(id) => setExpandedId(id)}
+              onExpandSession={navigateToSession}
             />
           ))}
         </div>
@@ -855,7 +877,7 @@ function SessionList({ sessions, indexStatus, loading, error }: {
                       session={s}
                       expanded={expandedId === s.id}
                       onToggle={() => toggleExpand(s.id)}
-                      onExpandSession={(id) => setExpandedId(id)}
+                      onExpandSession={navigateToSession}
                     />
                   ))}
                 </div>
