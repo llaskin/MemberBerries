@@ -305,6 +305,20 @@ else
     fi
 fi
 
+# --- CLAUDE-SESSIONS DENDRITE ---
+if ! dendrite_enabled "claude-sessions"; then
+    echo "  · claude-sessions: disabled in config"
+else
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    if PROJECT="$PROJECT" npx --prefix "$SCRIPT_DIR/../desktop" tsx "$SCRIPT_DIR/../desktop/src/lib/sessionDendrite.ts" dendrite \
+        --workspace "$WORKSPACE" \
+        --since "$GIT_SINCE" 2>/dev/null; then
+        echo "  ✓ claude-sessions: dendrite collected"
+    else
+        echo "  · claude-sessions: skipped (no sessions DB or error)"
+    fi
+fi
+
 # NOTE: .last-collection is NOT updated here.
 # axon-rollup updates it after successful rollup to avoid losing signals on failure.
 

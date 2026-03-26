@@ -185,7 +185,89 @@ echo ""
 # Unset CLAUDECODE to avoid nested session detection
 unset CLAUDECODE 2>/dev/null || true
 
+# Per-workspace allowed_tools config (default: Read,Glob,Grep for git workspaces)
+ALLOWED_TOOLS="Read,Glob,Grep"
+if [[ -f "$WORKSPACE/config.yaml" ]]; then
+    _tools_line=$(grep -E '^\s+allowed_tools:' "$WORKSPACE/config.yaml" 2>/dev/null || true)
+    if [[ -n "$_tools_line" ]]; then
+        if echo "$_tools_line" | grep -q '\[\]'; then
+            ALLOWED_TOOLS=""
+        fi
+    fi
+fi
+
+# Detect session-based workspace
+IS_SESSION_WORKSPACE=false
+if grep -q 'claude-sessions: true' "$WORKSPACE/config.yaml" 2>/dev/null; then
+    IS_SESSION_WORKSPACE=true
+fi
+
 CLAUDE_STDERR=$(mktemp)
+
+if [[ "$IS_SESSION_WORKSPACE" == "true" ]]; then
+# --- Session-oriented rollup prompt ---
+ROLLUP_RESULT=$(echo "You are Axon, running in headless mode. Produce the nightly rollup for Claude Code sessions.
+
+## Protocol
+$PROTOCOL_TEXT
+
+## Current State
+$STATE
+
+## Recent Episodes (for continuity)
+$RECENT_EPISODES
+
+## Today's Session Signals
+$DENDRITES
+$USER_CONTEXT_BLOCK
+## Task
+Produce today's session rollup. Start with YAML frontmatter, then markdown sections.
+
+### YAML Frontmatter (REQUIRED — use EXACTLY these field names)
+\`\`\`
+---
+type: rollup
+date: $TODAY
+project: claude-sessions
+headline: \"<one punchy line summarizing the day — max 80 chars>\"
+tags: [<2-4 from: shipping, research, debugging, architecture, tooling, refactor, customer-work, exploration>]
+energy: <high|medium|low — ONLY these three words>
+momentum: <accelerating|steady|decelerating — ONLY these three words>
+sessions: <integer — number of Claude sessions>
+prompts: <integer — total user prompts>
+totalCost: <float — total estimated USD>
+projectsTouched: <integer — number of distinct projects>
+decisions: <integer — number of decision traces>
+openLoops: <integer — number of unfinished items>
+riskItems: <integer — number of items flagged as risky>
+---
+\`\`\`
+
+### Sections
+1. **Summary** — 2-3 sentences: what was accomplished across sessions, specific project/topic names, aggregate stats (sessions, prompts, cost)
+2. **Momentum** — one paragraph: accelerating/steady/decelerating based on session frequency, cost trends, project spread. Compare to recent rollups. End with one of: **accelerating**, **steady**, or **decelerating**.
+3. **Key Decisions** — Decision Trace format. ID: DT-YYYYMMDD-N. Extract decisions from prompt content and session context.
+   - **Input:** what triggered the decision
+   - **Constraint:** what limited options
+   - **Tradeoff:** what was weighed
+   - **Decision:** what was chosen and why
+   - **Sessions:** which session IDs were involved
+4. **Projects Touched** — each project with session count, key activities, notable files or tools used
+5. **Unfinished Work** — use [ ] for new items, [>] for carried from previous rollups. Derived from session context (abandoned threads, TODO-like prompts)
+6. **Risk Flags** — sessions with high error counts, repeated debugging, cost spikes. Carried items >3 days flagged with ⚠️
+7. **Continuity** — what threads connect today to yesterday, what carries forward
+8. **Recommended Next Steps** — rank by LEVERAGE. Specific, actionable. Have an opinion.
+
+### Tone
+Be conversational but precise. Reference specific sessions and projects. You are a sharp colleague reviewing the day's Claude usage — not a summarizer.
+
+IMPORTANT: Output ONLY the rollup document. No preamble. Start with the YAML frontmatter (---).
+
+YOUR VERY FIRST LINE OF OUTPUT MUST BE exactly: ---
+Followed immediately by the YAML frontmatter fields." | claude -p --output-format json ${ALLOWED_TOOLS:+--allowedTools "$ALLOWED_TOOLS"} 2>"$CLAUDE_STDERR")
+
+else
+# --- Git-oriented rollup prompt (original) ---
 ROLLUP_RESULT=$(echo "You are Axon, running in headless mode. Produce the nightly rollup for '$PROJECT'.
 
 ## Protocol
@@ -261,7 +343,9 @@ The project path is: $PROJECT_PATH
 IMPORTANT: Output ONLY the rollup document. No preamble, no meta-commentary, no notes about your process. Start with the YAML frontmatter (---) and end with the last section. Do not mention files you wrote, tools you used, or sandbox limitations.
 
 YOUR VERY FIRST LINE OF OUTPUT MUST BE exactly: ---
-Followed immediately by the YAML frontmatter fields. No text before it. No blank lines before it." | claude -p --output-format json --allowedTools "Read,Glob,Grep" 2>"$CLAUDE_STDERR")
+Followed immediately by the YAML frontmatter fields. No text before it. No blank lines before it." | claude -p --output-format json ${ALLOWED_TOOLS:+--allowedTools "$ALLOWED_TOOLS"} 2>"$CLAUDE_STDERR")
+
+fi  # end IS_SESSION_WORKSPACE conditional
 
 # Validate response is valid JSON with a .result field
 if ! echo "$ROLLUP_RESULT" | jq -e '.result' > /dev/null 2>&1; then
