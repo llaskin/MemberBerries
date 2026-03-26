@@ -188,7 +188,7 @@ function SessionDetailPanel({ sessionId }: { sessionId: string }) {
           <div className="space-y-1">
             {toolCalls.slice(0, 8).map(tc => (
               <div key={tc.tool} className="flex items-center gap-2">
-                <span className="font-mono text-micro text-ax-text-secondary w-16 shrink-0 text-right">{tc.tool}</span>
+                <span className="font-mono text-micro text-ax-text-secondary w-24 shrink-0 text-right truncate" title={tc.tool}>{tc.tool}</span>
                 <div className="flex-1 h-3 bg-ax-sunken rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
