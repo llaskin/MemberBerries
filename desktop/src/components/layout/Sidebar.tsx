@@ -308,6 +308,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
                 onClick={(e) => {
                   if (!dragThreshold.current) {
                     setActiveProject(p.name)
+                    setView('agents')
                     showHint(['⌘', '↑', '↓'], 'to switch projects', e.currentTarget)
                   }
                 }}
