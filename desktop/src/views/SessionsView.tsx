@@ -260,10 +260,11 @@ function SessionDetailPanel({ sessionId }: { sessionId: string }) {
 
 // --- Session Card (clickable, expands to show detail) ---
 
-function SessionCard({ session, expanded, onToggle }: {
+function SessionCard({ session, expanded, onToggle, onExpandSession }: {
   session: SessionSummary | SearchResult
   expanded: boolean
   onToggle: () => void
+  onExpandSession?: (id: string) => void
 }) {
   const s = session as SessionSummary & SearchResult
   const title = s.nickname || s.first_prompt || 'Untitled session'
@@ -271,6 +272,7 @@ function SessionCard({ session, expanded, onToggle }: {
 
   return (
     <div
+      data-session-id={s.id}
       className={`bg-ax-elevated rounded-xl border p-5 transition-colors cursor-pointer ${
         expanded ? 'border-ax-brand/40 shadow-sm' : 'border-ax-border hover:border-ax-border-strong'
       }`}
@@ -361,7 +363,7 @@ function SessionCard({ session, expanded, onToggle }: {
         <div onClick={(e) => e.stopPropagation()}>
           <SessionDetailPanel sessionId={s.id} />
           <PromptTimeline sessionId={s.id} />
-          <RelatedSessions sessionId={s.id} projectName={s.project_name} onSelect={onToggle} />
+          <RelatedSessions sessionId={s.id} projectName={s.project_name} onSelect={onExpandSession || (() => {})} />
         </div>
       )}
     </div>
@@ -426,7 +428,7 @@ function renderRedactedText(text: string): React.ReactNode {
 function RelatedSessions({ sessionId, projectName, onSelect }: {
   sessionId: string
   projectName: string
-  onSelect: () => void
+  onSelect: (id: string) => void
 }) {
   const { sessions } = useSessions(null)
   const related = useMemo(() =>
@@ -446,6 +448,13 @@ function RelatedSessions({ sessionId, projectName, onSelect }: {
         {related.map(s => (
           <span
             key={s.id}
+            onClick={() => {
+              onSelect(s.id)
+              // Scroll the newly expanded card into view after React re-renders
+              setTimeout(() => {
+                document.querySelector(`[data-session-id="${s.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }, 100)
+            }}
             className="bg-ax-sunken px-2 py-1 rounded-md font-mono text-micro cursor-pointer hover:bg-ax-elevated transition-colors border border-ax-border-subtle"
           >
             <span className="text-ax-brand font-semibold">#{s.id.slice(0, 8)}</span>
@@ -553,6 +562,7 @@ function DayViewList({ sessions }: { sessions: SessionSummary[] }) {
                     session={s}
                     expanded={expandedId === s.id}
                     onToggle={() => toggleExpand(s.id)}
+                    onExpandSession={(id) => setExpandedId(id)}
                   />
                 ))}
             </div>
@@ -609,6 +619,7 @@ function ProjectViewList() {
                     session={s}
                     expanded={expandedId === s.id}
                     onToggle={() => toggleExpand(s.id)}
+                    onExpandSession={(id) => setExpandedId(id)}
                   />
                 ))}
             </div>
@@ -783,6 +794,7 @@ function SessionList({ sessions, indexStatus, loading, error }: {
               session={r}
               expanded={expandedId === r.id}
               onToggle={() => toggleExpand(r.id)}
+              onExpandSession={(id) => setExpandedId(id)}
             />
           ))}
         </div>
@@ -829,6 +841,7 @@ function SessionList({ sessions, indexStatus, loading, error }: {
                       session={s}
                       expanded={expandedId === s.id}
                       onToggle={() => toggleExpand(s.id)}
+                      onExpandSession={(id) => setExpandedId(id)}
                     />
                   ))}
                 </div>
