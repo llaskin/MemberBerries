@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { useProjectStore } from '@/store/projectStore'
 import { useUIStore } from '@/store/uiStore'
 import { useSessions, useSessionSearch, useSessionsByProject, usePromptTimeline, type SessionSummary, type SearchResult } from '@/hooks/useSessions'
 import { Search, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, AlertCircle, Terminal as TerminalIcon } from 'lucide-react'
@@ -930,12 +929,12 @@ function generateDemoData(): {
 // --- Main Sessions View ---
 
 export function SessionsView() {
-  const activeProject = useProjectStore((s) => s.activeProject)
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [agentFilter, setAgentFilter] = useState<string | null>(null)
   const [installedAgents, setInstalledAgents] = useState<{ id: string; name: string; color: string }[]>([])
 
-  const { sessions: allSessions, indexStatus, loading, error } = useSessions(activeProject)
+  // Always show all sessions — Axon workspace names don't map to session project_name
+  const { sessions: allSessions, indexStatus, loading, error } = useSessions(null)
 
   // Fetch installed agents
   useEffect(() => {
@@ -995,11 +994,6 @@ export function SessionsView() {
         <h1 className="font-serif italic text-[16px] text-ax-text-primary">
           Agent Sessions
         </h1>
-        {activeProject && (
-          <span className="font-mono text-[10px] text-ax-text-tertiary truncate max-w-[140px]">
-            {activeProject}
-          </span>
-        )}
         <div className="ml-auto">
           <span className="font-mono text-[10px] text-ax-text-ghost">
             {sessions.length}
