@@ -4,6 +4,39 @@ import { useSessions, useSessionSearch, useSessionsByProject, usePromptTimeline,
 import { Search, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, AlertCircle, Terminal as TerminalIcon } from 'lucide-react'
 import { AGENTS, type AgentId } from '@/lib/agents/types'
 
+/**
+ * Strip XML-like tags from text (e.g. <system-reminder>...</system-reminder>, <local-command-caveat>...)
+ * and clean up the result for display.
+ */
+function stripTags(text: string): string {
+  if (!text) return text
+  return text
+    // Remove full tag pairs with content: <tag>content</tag>
+    .replace(/<(system-reminder|local-command-caveat|command-name|command-message|command-args|local-command-stdout|antml:[a-z_]+)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    // Remove self-closing tags
+    .replace(/<[a-z_-]+\s*\/>/gi, '')
+    // Remove any remaining XML-like opening/closing tags
+    .replace(/<\/?[a-z_-]+[^>]*>/gi, '')
+    // Clean up multiple whitespace/newlines left behind
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/**
+ * Copy text to clipboard. Returns true on success.
+ */
+function copyToClipboard(text: string): void {
+  navigator.clipboard.writeText(text).catch(() => {
+    // Fallback for older browsers
+    const el = document.createElement('textarea')
+    el.value = text
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand('copy')
+    document.body.removeChild(el)
+  })
+}
+
 // Heat strip colors — warm palette from design system
 const HEAT_COLORS: Record<string, string> = {
   read: '#6B8FAD',
@@ -209,9 +242,16 @@ function SessionDetailPanel({ sessionId }: { sessionId: string }) {
               let ops: string[] = []
               try { ops = JSON.parse(f.operations) } catch { ops = [f.operations] }
               return (
-                <div key={f.file_path} className="flex items-center gap-2 py-0.5">
+                <div key={f.file_path} className="flex items-center gap-2 py-0.5 group/file">
                   <FileText size={10} className="text-ax-text-tertiary shrink-0" />
-                  <span className="font-mono text-micro text-ax-text-secondary truncate flex-1">{f.file_path}</span>
+                  <span
+                    className="font-mono text-micro text-ax-text-secondary truncate flex-1 cursor-pointer hover:text-ax-text-primary"
+                    title={f.file_path}
+                    onContextMenu={(e) => { e.preventDefault(); copyToClipboard(f.file_path) }}
+                    onClick={() => copyToClipboard(f.file_path)}
+                  >
+                    {f.file_path}
+                  </span>
                   <span className="font-mono text-micro text-ax-text-tertiary shrink-0">{ops.join(', ')}</span>
                   <span className="font-mono text-micro text-ax-text-tertiary shrink-0 w-6 text-right">{f.count}x</span>
                 </div>
@@ -255,7 +295,7 @@ function SessionCard({ session, expanded, onToggle, onExpandSession }: {
   onExpandSession?: (id: string) => void
 }) {
   const s = session as SessionSummary & SearchResult
-  const title = s.nickname || s.first_prompt || 'Untitled session'
+  const title = s.nickname || stripTags(s.first_prompt || '') || 'Untitled session'
   const snippet = 'snippet' in s ? s.snippet : null
 
   return (
@@ -388,7 +428,7 @@ function PromptTimeline({ sessionId }: { sessionId: string }) {
               {new Date(p.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </div>
             <div className="text-small text-ax-text-secondary mt-0.5 leading-relaxed">
-              {renderRedactedText(p.display)}
+              {renderRedactedText(stripTags(p.display))}
             </div>
           </div>
         ))}
