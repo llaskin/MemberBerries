@@ -223,6 +223,59 @@ function scanSingleFolder(folderId: string, preResolved?: { displayName: string;
     }
   } catch { /* ignore */ }
 
+  // Scan subagent JSONL files: {projectDir}/{sessionId}/subagents/*.jsonl
+  try {
+    const sessionDirs = readdirSync(projectDir).filter(f => {
+      try { return statSync(join(projectDir, f)).isDirectory() } catch { return false }
+    })
+    for (const sessionDir of sessionDirs) {
+      const subagentsDir = join(projectDir, sessionDir, 'subagents')
+      if (!existsSync(subagentsDir)) continue
+      let subFiles: string[]
+      try { subFiles = readdirSync(subagentsDir).filter(f => f.endsWith('.jsonl')) } catch { continue }
+
+      for (const file of subFiles) {
+        const sid = `${sessionDir}/subagents/${file.replace('.jsonl', '')}`
+        const jsonlPath = join(subagentsDir, file)
+        let jsonlSize: number | null = null
+        let jsonlMtime: string | null = null
+        try {
+          const st = statSync(jsonlPath)
+          jsonlSize = st.size
+          jsonlMtime = st.mtime.toISOString()
+        } catch { continue }
+
+        // Skip if already indexed and unchanged
+        const existing = db.prepare(
+          'SELECT jsonl_size, jsonl_mtime FROM sessions WHERE id = ?'
+        ).get(sid) as { jsonl_size: number | null; jsonl_mtime: string | null } | undefined
+        if (existing && existing.jsonl_size === jsonlSize && existing.jsonl_mtime === jsonlMtime) continue
+
+        const parsed = parseJsonlFileLightweight(jsonlPath)
+        if (!parsed) continue
+
+        rows.push([
+          sid,
+          folderId,
+          projectPath,
+          projectName,
+          parsed.firstPrompt,
+          null, // customTitle
+          null, // summary
+          parsed.messageCount,
+          null, // gitBranch
+          parsed.created,
+          parsed.modified,
+          new Date().toISOString(),
+          jsonlSize,
+          jsonlMtime,
+          1, // is_sidechain (subagent)
+          0  // analytics_indexed
+        ])
+      }
+    }
+  } catch { /* ignore */ }
+
   // Batch insert per project
   if (rows.length > 0) {
     insertMany(rows)
@@ -342,6 +395,7 @@ interface ParsedFileTouchRow {
 
 async function indexSessionAnalytics(sessionId: string, projectId: string): Promise<void> {
   const db = getSessionDb()
+  // Works for both regular sessions (uuid.jsonl) and subagents (uuid/subagents/agent-id.jsonl)
   const jsonlPath = join(PROJECTS_DIR, projectId, `${sessionId}.jsonl`)
   const parsed = parseJsonlFile(jsonlPath)
   if (!parsed) {
