@@ -2,129 +2,129 @@
 @import "tailwindcss";
 
 /* ================================================
-   LIGHT MODE — "Cream Paper"
-   Warm, editorial, premium
+   LIGHT MODE — "Berry Garden"
+   Clean white with purple sidebar and berry accents
    ================================================ */
 :root {
   /* Surfaces */
-  --ax-bg-base:             #FAF7F2;
+  --ax-bg-base:             #FDFAFF;
   --ax-bg-elevated:         #FFFFFF;
-  --ax-bg-sunken:           #F3EDE5;
-  --ax-bg-sidebar:          #2C2420;
+  --ax-bg-sunken:           #F5F0FA;
+  --ax-bg-sidebar:          #581C87;
 
   /* Text */
-  --ax-text-primary:        #1A1614;
-  --ax-text-secondary:      #5C524A;
-  --ax-text-tertiary:       #84776C;
-  --ax-text-ghost:          #A89B90;
-  --ax-text-on-dark:        #F5F0EA;
-  --ax-text-on-dark-muted:  #A89888;
+  --ax-text-primary:        #1C1024;
+  --ax-text-secondary:      #57476A;
+  --ax-text-tertiary:       #8B7BA0;
+  --ax-text-ghost:          #B8ABCC;
+  --ax-text-on-dark:        #F5F0FF;
+  --ax-text-on-dark-muted:  #C4A6E8;
 
   /* Brand */
-  --ax-brand-primary:       #C8956C;
-  --ax-brand-hover:         #B5845E;
-  --ax-brand-active:        #A27350;
-  --ax-brand-subtle:        #F0E4D8;
+  --ax-brand-primary:       #9333EA;
+  --ax-brand-hover:         #7E22CE;
+  --ax-brand-active:        #6B21A8;
+  --ax-brand-subtle:        #F3E8FF;
 
   /* Accent */
-  --ax-accent:              #7B9E7B;
-  --ax-accent-hover:        #6B8E6B;
-  --ax-accent-subtle:       #E8F0E8;
+  --ax-accent:              #7C3AED;
+  --ax-accent-hover:        #6D28D9;
+  --ax-accent-subtle:       #EDE9FE;
 
   /* Semantic */
-  --ax-success:             #5A8A5A;
-  --ax-success-subtle:      #E4EFE4;
-  --ax-warning:             #C4933B;
-  --ax-warning-subtle:      #F8F0E0;
-  --ax-error:               #B85450;
-  --ax-error-subtle:        #F8EAEA;
-  --ax-info:                #6B8FAD;
-  --ax-info-subtle:         #E8EFF5;
+  --ax-success:             #16A34A;
+  --ax-success-subtle:      #DCFCE7;
+  --ax-warning:             #D97706;
+  --ax-warning-subtle:      #FEF3C7;
+  --ax-error:               #DC2626;
+  --ax-error-subtle:        #FEE2E2;
+  --ax-info:                #2563EB;
+  --ax-info-subtle:         #DBEAFE;
 
   /* Borders */
-  --ax-border:              #E5DDD3;
-  --ax-border-subtle:       #EDE7DF;
-  --ax-border-strong:       #C4B8AD;
+  --ax-border:              #E9E0F2;
+  --ax-border-subtle:       #F0EAF7;
+  --ax-border-strong:       #D4C4E5;
 
   /* Energy */
-  --ax-energy-low:          #9B8E83;
-  --ax-energy-medium:       #C8956C;
-  --ax-energy-high:         #B85450;
+  --ax-energy-low:          #8B7BA0;
+  --ax-energy-medium:       #9333EA;
+  --ax-energy-high:         #DC2626;
 
   /* Neural ASCII */
-  --ax-ascii-char:          #EAE3DA;
-  --ax-ascii-char-dim:      #F0EBE4;
-  --ax-ascii-char-bright:   #DDD4C9;
-  --ax-neural-opacity:      0.6;
+  --ax-ascii-char:          #EDE5F5;
+  --ax-ascii-char-dim:      #F3EDF9;
+  --ax-ascii-char-bright:   #DED2EC;
+  --ax-neural-opacity:      0.5;
 
   /* Shadows */
-  --ax-shadow-color:        47, 36, 28;
+  --ax-shadow-color:        88, 28, 135;
 
   /* Selection */
-  --ax-selection-bg:        #C8956C33;
+  --ax-selection-bg:        #9333EA33;
 }
 
 /* ================================================
-   DARK MODE — "Neural Dark"
-   Warm charcoal, not blue-black.
+   DARK MODE — "Berry Night"
+   Deep purple-black with berry accents
    ================================================ */
 [data-theme="dark"] {
   /* Surfaces */
-  --ax-bg-base:             #1A1614;
-  --ax-bg-elevated:         #252019;
-  --ax-bg-sunken:           #13110F;
-  --ax-bg-sidebar:          #13110F;
+  --ax-bg-base:             #0F0A18;
+  --ax-bg-elevated:         #1A1228;
+  --ax-bg-sunken:           #0A0710;
+  --ax-bg-sidebar:          #1A1025;
 
   /* Text */
-  --ax-text-primary:        #F0EBE4;
-  --ax-text-secondary:      #B8AA9C;
-  --ax-text-tertiary:       #7A6E63;
-  --ax-text-ghost:          #3D3530;
-  --ax-text-on-dark:        #F0EBE4;
-  --ax-text-on-dark-muted:  #7A6E63;
+  --ax-text-primary:        #F0EAFF;
+  --ax-text-secondary:      #B8A8D4;
+  --ax-text-tertiary:       #6E5E88;
+  --ax-text-ghost:          #3A2E4E;
+  --ax-text-on-dark:        #F0EAFF;
+  --ax-text-on-dark-muted:  #6E5E88;
 
-  /* Brand — slightly brighter for contrast */
-  --ax-brand-primary:       #D4A57C;
-  --ax-brand-hover:         #DEB58E;
-  --ax-brand-active:        #C8956C;
-  --ax-brand-subtle:        #2E2520;
+  /* Brand — brighter purple for dark mode contrast */
+  --ax-brand-primary:       #A855F7;
+  --ax-brand-hover:         #C084FC;
+  --ax-brand-active:        #9333EA;
+  --ax-brand-subtle:        #2D1B4E;
 
   /* Accent */
-  --ax-accent:              #8DB88D;
-  --ax-accent-hover:        #9DC89D;
-  --ax-accent-subtle:       #1E2A1E;
+  --ax-accent:              #A78BFA;
+  --ax-accent-hover:        #C4B5FD;
+  --ax-accent-subtle:       #1E1538;
 
   /* Semantic */
-  --ax-success:             #6BA06B;
-  --ax-success-subtle:      #1A261A;
-  --ax-warning:             #D4A34B;
-  --ax-warning-subtle:      #2A2418;
-  --ax-error:               #D06460;
-  --ax-error-subtle:        #2A1A1A;
-  --ax-info:                #7BA0BE;
-  --ax-info-subtle:         #1A2230;
+  --ax-success:             #4ADE80;
+  --ax-success-subtle:      #0A1F12;
+  --ax-warning:             #FBBF24;
+  --ax-warning-subtle:      #1F1A08;
+  --ax-error:               #F87171;
+  --ax-error-subtle:        #2A0F0F;
+  --ax-info:                #60A5FA;
+  --ax-info-subtle:         #0C1A30;
 
   /* Borders */
-  --ax-border:              #332D27;
-  --ax-border-subtle:       #2A2420;
-  --ax-border-strong:       #4A403A;
+  --ax-border:              #2E2242;
+  --ax-border-subtle:       #231A35;
+  --ax-border-strong:       #4A3866;
 
   /* Energy */
-  --ax-energy-low:          #5C524A;
-  --ax-energy-medium:       #D4A57C;
-  --ax-energy-high:         #D06460;
+  --ax-energy-low:          #6E5E88;
+  --ax-energy-medium:       #A855F7;
+  --ax-energy-high:         #F87171;
 
   /* Neural ASCII */
-  --ax-ascii-char:          #2A2420;
-  --ax-ascii-char-dim:      #1F1C18;
-  --ax-ascii-char-bright:   #3D3530;
+  --ax-ascii-char:          #1E1530;
+  --ax-ascii-char-dim:      #150F22;
+  --ax-ascii-char-bright:   #2E2242;
   --ax-neural-opacity:      0.15;
 
   /* Shadows */
   --ax-shadow-color:        0, 0, 0;
 
   /* Selection */
-  --ax-selection-bg:        #D4A57C33;
+  --ax-selection-bg:        #A855F733;
 }
 
 /* ================================================

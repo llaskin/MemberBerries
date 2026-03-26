@@ -254,7 +254,7 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
       </div>
 
       {/* Middle section — projects + views centered together */}
-      <div className="flex-1 flex flex-col justify-center min-h-0 py-4">
+      <div className="flex-1 flex flex-col min-h-0 pt-6">
 
       {/* Collapsed project indicator */}
       {collapsed && activeProjectData && (
