@@ -6,6 +6,8 @@ import { SettingsView } from '@/views/SettingsView'
 import { SessionsView } from '@/views/SessionsView'
 import { AnalyticsView } from '@/views/AnalyticsView'
 import { AboutView } from '@/views/AboutView'
+import { IntroSplash } from '@/components/shared/IntroSplash'
+import { PreflightCheck } from '@/components/shared/PreflightCheck'
 import { AuthOverlay } from '@/components/shared/AuthOverlay'
 
 function AnalyticsViewPage() {
