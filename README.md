@@ -33,8 +33,8 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/llaskin/axon.git
-cd axon/desktop
+git clone https://github.com/llaskin/MemberBerries.git
+cd MemberBerries/desktop
 
 # Install dependencies
 npm install
@@ -85,13 +85,13 @@ Agent Sessions can generate AI-powered daily summaries of your activity using th
 npm install -g .
 
 # Run a rollup for all agents
-axon rollup --project agent-sessions
+memberberries rollup --project agent-sessions
 
 # Or for a specific agent
-axon rollup --project claude-sessions
+memberberries rollup --project claude-sessions
 ```
 
-Rollups are stored locally in `~/.axon/workspaces/*/episodes/`. Only redacted session summaries are sent to the Anthropic API during rollup generation.
+Rollups are stored locally in `~/.memberberries/workspaces/*/episodes/`. Only redacted session summaries are sent to the Anthropic API during rollup generation.
 
 ## Development
 

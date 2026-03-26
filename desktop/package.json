@@ -1,12 +1,12 @@
 {
-  "name": "axon-desktop",
+  "name": "memberberries-desktop",
   "private": true,
-  "version": "0.1.11",
-  "description": "Axon developer memory system — desktop app",
-  "author": "Axon Embodied",
+  "version": "0.2.0",
+  "description": "MemberBerries — local-first AI agent session tracker",
+  "author": "llaskin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AxonEmbodied/axon.git",
+    "url": "https://github.com/llaskin/MemberBerries.git",
     "directory": "desktop"
   },
   "type": "module",

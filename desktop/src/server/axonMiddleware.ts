@@ -2061,7 +2061,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
             runFullIndex()
           }
         } catch (err) {
-          console.error('[Axon] Session indexer failed:', err)
+          console.error('[MemberBerries] Session indexer failed:', err)
         }
 
         // Discover non-Claude agent sessions
@@ -2085,7 +2085,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
             if (sessions.length > 0) upsertAgentSessions(sessions)
           }
         } catch (err) {
-          console.error('[Axon] Agent discovery failed:', err)
+          console.error('[MemberBerries] Agent discovery failed:', err)
         }
       }
 

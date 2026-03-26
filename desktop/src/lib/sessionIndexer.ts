@@ -22,7 +22,7 @@ export function runFullIndex(): void {
     try {
       fullIndex()
     } catch (err) {
-      console.error('[Axon Indexer] Full index failed:', err)
+      console.error('[MemberBerries] Full index failed:', err)
     }
   })
 }
@@ -45,14 +45,14 @@ export function getIndexStatus(): IndexStatus {
 function fullIndex(): void {
   if (!existsSync(PROJECTS_DIR)) return
 
-  console.log('[Axon Indexer] Starting full index...')
+  console.log('[MemberBerries] Starting full index...')
   const start = Date.now()
 
   // Phase 1: Basic scan from sessions-index.json (fast)
   phaseBasicScan()
 
   const phase1Time = Date.now() - start
-  console.log(`[Axon Indexer] Phase 1 (basic scan) complete in ${phase1Time}ms`)
+  console.log(`[MemberBerries] Phase 1 (basic scan) complete in ${phase1Time}ms`)
 
   // Phase 2 + 3: Background analytics + FTS
   scheduleBackgroundWork()
@@ -169,7 +169,7 @@ function scanSingleFolder(folderId: string, preResolved?: { displayName: string;
         ])
       }
     } catch (err) {
-      console.error(`[Axon Indexer] Failed to parse index for ${folderId}:`, err)
+      console.error(`[MemberBerries] Failed to parse index for ${folderId}:`, err)
     }
   }
 
@@ -285,7 +285,7 @@ function scheduleBackgroundWork(): void {
   )
   const needsFts = allSessionIds.filter((r) => !ftsSessionIds.has(r.id))
 
-  console.log(`[Axon Indexer] Background: ${needsAnalytics.length} need analytics, ${needsFts.length} need FTS`)
+  console.log(`[MemberBerries] Background: ${needsAnalytics.length} need analytics, ${needsFts.length} need FTS`)
 
   let analyticsIdx = 0
   let ftsIdx = 0
@@ -303,7 +303,7 @@ function scheduleBackgroundWork(): void {
         indexSessionAnalytics(id, project_id)
         processed++
       } catch (err) {
-        console.error(`[Axon Indexer] Analytics failed for ${id}:`, err)
+        console.error(`[MemberBerries] Analytics failed for ${id}:`, err)
         // Mark as indexed so the counter advances past failures
         try { getSessionDb().prepare('UPDATE sessions SET analytics_indexed = 1 WHERE id = ?').run(id) } catch {}
       }
@@ -316,7 +316,7 @@ function scheduleBackgroundWork(): void {
         indexSessionFts(id)
         processed++
       } catch (err) {
-        console.error(`[Axon Indexer] FTS failed for ${id}:`, err)
+        console.error(`[MemberBerries] FTS failed for ${id}:`, err)
       }
     }
 
@@ -324,7 +324,7 @@ function scheduleBackgroundWork(): void {
     if (analyticsIdx < needsAnalytics.length || ftsIdx < needsFts.length) {
       setImmediate(processBatch)
     } else {
-      console.log(`[Axon Indexer] Background indexing complete`)
+      console.log(`[MemberBerries] Background indexing complete`)
     }
   }
 
@@ -556,7 +556,7 @@ export function indexSession(projectId: string, sessionId: string): void {
       indexSessionAnalytics(sessionId, projectId)
       indexSessionFts(sessionId)
     } catch (err) {
-      console.error(`[Axon Indexer] Incremental re-index failed for ${sessionId}:`, err)
+      console.error(`[MemberBerries] Incremental re-index failed for ${sessionId}:`, err)
     }
   })
 }

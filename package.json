@@ -1,24 +1,25 @@
 {
-  "name": "axon-dev",
-  "version": "0.1.7",
-  "description": "Developer memory system — nightly AI rollups, morning briefings, decision traces",
+  "name": "memberberries",
+  "version": "0.2.0",
+  "description": "Local-first dashboard for tracking AI coding agent activity across Claude Code, Codex, Cursor, and GitHub Copilot",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AxonEmbodied/axon"
+    "url": "https://github.com/llaskin/MemberBerries"
   },
-  "homepage": "https://github.com/AxonEmbodied/axon#readme",
+  "homepage": "https://github.com/llaskin/MemberBerries#readme",
   "keywords": [
     "ai",
     "developer-tools",
-    "memory",
-    "rollup",
+    "agent-sessions",
+    "analytics",
     "claude",
-    "context",
-    "decision-trace"
+    "codex",
+    "cursor",
+    "copilot"
   ],
   "bin": {
-    "axon": "cli/axon"
+    "memberberries": "cli/axon"
   },
   "files": [
     "cli/",
