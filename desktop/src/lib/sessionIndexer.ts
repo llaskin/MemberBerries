@@ -340,7 +340,7 @@ interface ParsedFileTouchRow {
   count: number
 }
 
-function indexSessionAnalytics(sessionId: string, projectId: string): void {
+async function indexSessionAnalytics(sessionId: string, projectId: string): Promise<void> {
   const db = getSessionDb()
   const jsonlPath = join(PROJECTS_DIR, projectId, `${sessionId}.jsonl`)
   const parsed = parseJsonlFile(jsonlPath)
