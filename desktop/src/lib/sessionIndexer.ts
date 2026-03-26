@@ -67,17 +67,32 @@ function scanSingleFolder(folderId: string, preResolved?: { displayName: string;
   const indexPath = join(projectDir, 'sessions-index.json')
 
   const insertSession = db.prepare(`
-    INSERT OR REPLACE INTO sessions (
+    INSERT INTO sessions (
       id, project_id, project_path, project_name,
       first_prompt, custom_title, summary, message_count,
       git_branch, created_at, modified_at, indexed_at,
-      jsonl_size, jsonl_mtime, is_sidechain, analytics_indexed
+      jsonl_size, jsonl_mtime, is_sidechain, analytics_indexed, agent
     ) VALUES (
       ?, ?, ?, ?,
       ?, ?, ?, ?,
       ?, ?, ?, ?,
-      ?, ?, ?, ?
+      ?, ?, ?, ?, 'claude'
     )
+    ON CONFLICT(id) DO UPDATE SET
+      project_path = excluded.project_path,
+      project_name = excluded.project_name,
+      first_prompt = excluded.first_prompt,
+      custom_title = excluded.custom_title,
+      summary = excluded.summary,
+      message_count = excluded.message_count,
+      git_branch = excluded.git_branch,
+      created_at = excluded.created_at,
+      modified_at = excluded.modified_at,
+      indexed_at = excluded.indexed_at,
+      jsonl_size = excluded.jsonl_size,
+      jsonl_mtime = excluded.jsonl_mtime,
+      is_sidechain = excluded.is_sidechain,
+      analytics_indexed = excluded.analytics_indexed
   `)
 
   const insertMany = db.transaction((rows: unknown[][]) => {
@@ -346,6 +361,7 @@ function indexSessionAnalytics(sessionId: string, projectId: string): void {
       estimated_input_tokens = ?,
       estimated_output_tokens = ?,
       estimated_cost_usd = ?,
+      estimated_total_tokens = ? + ?,
       heuristic_summary = ?,
       heatstrip_json = ?,
       tool_calls_json = ?,
@@ -361,6 +377,8 @@ function indexSessionAnalytics(sessionId: string, projectId: string): void {
     parsed.estimatedInputTokens,
     parsed.estimatedOutputTokens,
     parsed.estimatedCostUsd,
+    parsed.estimatedInputTokens,
+    parsed.estimatedOutputTokens,
     parsed.heuristicSummary,
     JSON.stringify(parsed.heatStrip),
     JSON.stringify(parsed.toolCalls),
@@ -502,12 +520,27 @@ export function indexSession(projectId: string, sessionId: string): void {
 
   // Upsert session (reset analytics_indexed so it gets re-processed)
   db.prepare(`
-    INSERT OR REPLACE INTO sessions (
+    INSERT INTO sessions (
       id, project_id, project_path, project_name,
       first_prompt, custom_title, summary, message_count,
       git_branch, created_at, modified_at, indexed_at,
-      jsonl_size, jsonl_mtime, is_sidechain, analytics_indexed
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      jsonl_size, jsonl_mtime, is_sidechain, analytics_indexed, agent
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'claude')
+    ON CONFLICT(id) DO UPDATE SET
+      project_path = excluded.project_path,
+      project_name = excluded.project_name,
+      first_prompt = excluded.first_prompt,
+      custom_title = excluded.custom_title,
+      summary = excluded.summary,
+      message_count = excluded.message_count,
+      git_branch = excluded.git_branch,
+      created_at = excluded.created_at,
+      modified_at = excluded.modified_at,
+      indexed_at = excluded.indexed_at,
+      jsonl_size = excluded.jsonl_size,
+      jsonl_mtime = excluded.jsonl_mtime,
+      is_sidechain = excluded.is_sidechain,
+      analytics_indexed = 0
   `).run(
     sessionId, projectId, projectPath, projectName,
     firstPrompt, customTitle, summary, messageCount,
