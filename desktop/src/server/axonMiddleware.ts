@@ -2227,7 +2227,7 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
       }
 
       // GET /api/mb/sessions/:id/transcript
-      const transcriptMatch = url.match(/^\/api\/mb\/sessions\/([0-9a-f-]{36})\/transcript$/)
+      const transcriptMatch = url.match(/^\/api\/mb\/sessions\/([^/]+)\/transcript$/)
       if (transcriptMatch) {
         const id = transcriptMatch[1]
         try {

@@ -72,7 +72,7 @@ export function ReplayPanel() {
                 {AGENTS[data.agentType as AgentId].name}
               </span>
             )}
-            {data && !data.unavailable && (
+            {data && !data.unavailable && !data.error && (
               <span className="font-mono text-micro text-ax-text-tertiary shrink-0">
                 {playback.currentIndex} / {data.messages.length}
               </span>
