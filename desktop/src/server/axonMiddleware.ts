@@ -2226,6 +2226,47 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
+      // GET /api/mb/sessions/:id/transcript
+      const transcriptMatch = url.match(/^\/api\/mb\/sessions\/([0-9a-f-]{36})\/transcript$/)
+      if (transcriptMatch) {
+        const id = transcriptMatch[1]
+        try {
+          const { getSessionById } = await import('../lib/sessionDb')
+          const session = getSessionById(id)
+          if (!session) {
+            res.statusCode = 404
+            res.end(JSON.stringify({ error: 'Session not found' }))
+            return
+          }
+
+          if (session.agent !== 'claude') {
+            res.end(JSON.stringify({
+              messages: [],
+              hasTimestamps: false,
+              agentType: session.agent,
+              unavailable: true,
+            }))
+            return
+          }
+
+          const jsonlPath = join(homedir(), '.claude', 'projects', session.project_id, `${id}.jsonl`)
+          const { parseClaudeTranscript } = await import('../lib/transcriptParser')
+          const result = parseClaudeTranscript(jsonlPath)
+
+          if (!result) {
+            res.statusCode = 404
+            res.end(JSON.stringify({ error: 'Session file not found', path: jsonlPath }))
+            return
+          }
+
+          res.end(JSON.stringify({ ...result, agentType: session.agent }))
+        } catch (err) {
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: String(err) }))
+        }
+        return
+      }
+
       // GET /api/mb/sessions/{id}
       const sessionDetailMatch = url.match(/^\/api\/mb\/sessions\/([0-9a-f-]{36})$/)
       if (sessionDetailMatch) {
