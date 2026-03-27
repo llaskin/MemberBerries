@@ -29,7 +29,16 @@ export function usePlayback(messages: ParsedMessage[], hasTimestamps: boolean): 
   const gapCountdownRef = useRef<number>(0)
   const speedRef = useRef(speed)
 
+  // Refs that mirror state so the rAF loop never reads stale closures
+  // and never calls requestAnimationFrame inside a setState updater
+  const currentIndexRef = useRef(currentIndex)
+  const streamProgressRef = useRef(streamProgress)
+  const isPlayingRef = useRef(isPlaying)
+
   useEffect(() => { speedRef.current = speed }, [speed])
+  useEffect(() => { currentIndexRef.current = currentIndex }, [currentIndex])
+  useEffect(() => { streamProgressRef.current = streamProgress }, [streamProgress])
+  useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
 
   const interMessageGapMs = useCallback((fromIndex: number, toIndex: number): number => {
     if (!hasTimestamps) return FIXED_GAP_MS
@@ -48,7 +57,7 @@ export function usePlayback(messages: ParsedMessage[], hasTimestamps: boolean): 
       .reduce((sum, b) => sum + (b.text?.length || b.thinking?.length || 0), 0)
   }, [messages])
 
-  // Use refs to avoid stale closures in the rAF loop
+  // Keep refs in sync for the rAF loop
   const messagesRef = useRef(messages)
   const interMessageGapMsRef = useRef(interMessageGapMs)
   const currentTextLengthRef = useRef(currentTextLength)
@@ -57,63 +66,76 @@ export function usePlayback(messages: ParsedMessage[], hasTimestamps: boolean): 
   useEffect(() => { currentTextLengthRef.current = currentTextLength }, [currentTextLength])
 
   const tick = useCallback((now: number) => {
+    // Never call requestAnimationFrame inside a setState updater — React may
+    // invoke updaters multiple times (StrictMode, concurrent features), which
+    // would spawn exponentially many rAF loops and freeze the browser.
+    // All rAF scheduling and side effects happen here, in the tick body itself.
+
     const last = lastFrameRef.current
+    lastFrameRef.current = now
+
     if (last === null) {
-      lastFrameRef.current = now
       rafRef.current = requestAnimationFrame(tick)
       return
     }
 
     const delta = (now - last) * speedRef.current
-    lastFrameRef.current = now
+    const msgs = messagesRef.current
+    const ci = currentIndexRef.current
 
-    setCurrentIndex(ci => {
-      const msgs = messagesRef.current
-      if (ci >= msgs.length) { setIsPlaying(false); return ci }
+    if (ci >= msgs.length) {
+      setIsPlaying(false)
+      return
+    }
 
-      const msg = msgs[ci]
-      if (!msg) { setIsPlaying(false); return ci }
+    const msg = msgs[ci]
+    if (!msg) {
+      setIsPlaying(false)
+      return
+    }
 
-      // If in gap countdown, drain it
-      if (gapCountdownRef.current > 0) {
-        gapCountdownRef.current = Math.max(0, gapCountdownRef.current - delta)
-        if (gapCountdownRef.current <= 0) {
-          const nextIndex = ci + 1
-          if (nextIndex >= msgs.length) { setIsPlaying(false); return ci }
-          setStreamProgress(0)
-          gapCountdownRef.current = 0
-          return nextIndex
+    // Drain inter-message gap
+    if (gapCountdownRef.current > 0) {
+      gapCountdownRef.current = Math.max(0, gapCountdownRef.current - delta)
+      if (gapCountdownRef.current <= 0) {
+        const nextIndex = ci + 1
+        if (nextIndex >= msgs.length) {
+          setIsPlaying(false)
+          return
         }
-        rafRef.current = requestAnimationFrame(tick)
-        return ci
+        currentIndexRef.current = nextIndex
+        streamProgressRef.current = 0
+        setCurrentIndex(nextIndex)
+        setStreamProgress(0)
       }
-
-      if (msg.role === 'assistant') {
-        const totalChars = currentTextLengthRef.current(ci)
-        if (totalChars === 0) {
-          gapCountdownRef.current = interMessageGapMsRef.current(ci, ci + 1)
-          setStreamProgress(1)
-        } else {
-          setStreamProgress(prev => {
-            const progressPerMs = CHARS_PER_MS / totalChars
-            const next = prev + progressPerMs * delta
-            if (next >= 1) {
-              gapCountdownRef.current = interMessageGapMsRef.current(ci, ci + 1)
-              return 1
-            }
-            return next
-          })
-        }
-      } else {
-        // User messages appear instantly
-        gapCountdownRef.current = interMessageGapMsRef.current(ci, ci + 1)
-        setStreamProgress(1)
-      }
-
       rafRef.current = requestAnimationFrame(tick)
-      return ci
-    })
-  }, []) // stable — uses refs internally
+      return
+    }
+
+    if (msg.role === 'assistant') {
+      const totalChars = currentTextLengthRef.current(ci)
+      if (totalChars === 0) {
+        gapCountdownRef.current = interMessageGapMsRef.current(ci, ci + 1)
+        streamProgressRef.current = 1
+        setStreamProgress(1)
+      } else {
+        const progressPerMs = CHARS_PER_MS / totalChars
+        const next = Math.min(1, streamProgressRef.current + progressPerMs * delta)
+        streamProgressRef.current = next
+        setStreamProgress(next)
+        if (next >= 1) {
+          gapCountdownRef.current = interMessageGapMsRef.current(ci, ci + 1)
+        }
+      }
+    } else {
+      // User messages appear instantly
+      gapCountdownRef.current = interMessageGapMsRef.current(ci, ci + 1)
+      streamProgressRef.current = 1
+      setStreamProgress(1)
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+  }, []) // stable — reads everything through refs
 
   useEffect(() => {
     if (!isPlaying) {
@@ -134,6 +156,8 @@ export function usePlayback(messages: ParsedMessage[], hasTimestamps: boolean): 
 
   const seek = useCallback((index: number) => {
     const clamped = Math.max(0, Math.min(index, messages.length > 0 ? messages.length - 1 : 0))
+    currentIndexRef.current = clamped
+    streamProgressRef.current = 1
     setCurrentIndex(clamped)
     setStreamProgress(1)
     gapCountdownRef.current = 0
