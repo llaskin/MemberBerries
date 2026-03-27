@@ -26,7 +26,8 @@ describe('uiStore', () => {
       theme: 'light',
       activeView: 'timeline',
       selectedRollup: null,
-    })
+      activeReplayId: null,
+    } as any)
   })
 
   describe('initial state', () => {
@@ -135,6 +136,29 @@ describe('uiStore', () => {
       useUIStore.getState().goBack()
       expect(useUIStore.getState().activeView).toBe('timeline')
       expect(useUIStore.getState().selectedRollup).toBeNull()
+    })
+  })
+
+  describe('replay', () => {
+    it('defaults activeReplayId to null', () => {
+      expect(useUIStore.getState().activeReplayId).toBeNull()
+    })
+
+    it('openReplay sets activeReplayId', () => {
+      useUIStore.getState().openReplay('abc-123')
+      expect(useUIStore.getState().activeReplayId).toBe('abc-123')
+    })
+
+    it('closeReplay clears activeReplayId', () => {
+      useUIStore.setState({ activeReplayId: 'abc-123' } as any)
+      useUIStore.getState().closeReplay()
+      expect(useUIStore.getState().activeReplayId).toBeNull()
+    })
+
+    it('setView clears activeReplayId', () => {
+      useUIStore.setState({ activeReplayId: 'abc-123' } as any)
+      useUIStore.getState().setView('settings')
+      expect(useUIStore.getState().activeReplayId).toBeNull()
     })
   })
 })
