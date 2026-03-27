@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import type { ParsedMessage, ContentBlock } from '@/lib/transcriptParser'
 import { ToolCallBlock } from './ToolCallBlock'
 
@@ -12,6 +12,36 @@ function renderRedactedText(text: string): React.ReactNode {
     ) : (
       <span key={i}>{part}</span>
     )
+  )
+}
+
+const COLLAPSED_LINE_LIMIT = 3
+
+function UserMessageBlock({ text }: { text: string }) {
+  const lines = text.split('\n')
+  const isLong = lines.length > COLLAPSED_LINE_LIMIT
+  const [expanded, setExpanded] = useState(false)
+  const toggle = useCallback(() => setExpanded(e => !e), [])
+
+  const displayText = isLong && !expanded
+    ? lines.slice(0, COLLAPSED_LINE_LIMIT).join('\n') + '…'
+    : text
+
+  return (
+    <div className="border-l-2 border-ax-brand pl-3">
+      <span className="text-ax-brand text-small">&gt; </span>
+      <span className="text-ax-text-primary text-small whitespace-pre-wrap">
+        {renderRedactedText(displayText)}
+      </span>
+      {isLong && (
+        <button
+          className="block mt-1 font-mono text-micro text-ax-text-ghost hover:text-ax-text-tertiary transition-colors"
+          onClick={toggle}
+        >
+          {expanded ? '▴ show less' : '▾ show more'}
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -111,14 +141,7 @@ export function ReplayTranscript({
             .filter(b => b.type === 'text')
             .map(b => b.text || '')
             .join('\n')
-          return (
-            <div key={msg.index} className="border-l-2 border-ax-brand pl-3">
-              <span className="text-ax-brand text-small">&gt; </span>
-              <span className="text-ax-text-primary text-small whitespace-pre-wrap">
-                {renderRedactedText(text)}
-              </span>
-            </div>
-          )
+          return <UserMessageBlock key={msg.index} text={text} />
         }
 
         return (
