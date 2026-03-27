@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useUIStore } from '@/store/uiStore'
 import { useSessions, useSessionSearch, useSessionsByProject, usePromptTimeline, type SessionSummary, type SearchResult } from '@/hooks/useSessions'
-import { Search, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, AlertCircle, Terminal as TerminalIcon } from 'lucide-react'
+import { Search, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, AlertCircle, Terminal as TerminalIcon, Play } from 'lucide-react'
 import { AGENTS, type AgentId } from '@/lib/agents/types'
+import { ReplayPanel } from '@/components/ReplayPanel'
 
 /**
  * Strip XML-like tags from text (e.g. <system-reminder>...</system-reminder>, <local-command-caveat>...)
@@ -151,7 +152,7 @@ interface SessionDetail {
   filesTouched: { file_path: string; operations: string; count: number }[]
 }
 
-function SessionDetailPanel({ sessionId }: { sessionId: string }) {
+function SessionDetailPanel({ sessionId, onReplay }: { sessionId: string; onReplay: (id: string) => void }) {
   const [detail, setDetail] = useState<SessionDetail | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -286,9 +287,16 @@ function SessionDetailPanel({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {/* Session ID */}
-      <div className="pt-3 border-t border-ax-border-subtle">
-        <span className="font-mono text-micro text-ax-text-tertiary select-all">{sessionId}</span>
+      {/* Session ID + Replay */}
+      <div className="pt-3 border-t border-ax-border-subtle flex items-center justify-between gap-2">
+        <span className="font-mono text-micro text-ax-text-tertiary select-all truncate">{sessionId}</span>
+        <button
+          className="flex items-center gap-1 font-mono text-micro text-ax-brand hover:text-ax-brand/80 px-2 py-1 rounded border border-ax-brand/40 hover:border-ax-brand shrink-0 transition-colors"
+          onClick={() => onReplay(sessionId)}
+        >
+          <Play size={10} />
+          Replay
+        </button>
       </div>
     </div>
   )
@@ -296,11 +304,12 @@ function SessionDetailPanel({ sessionId }: { sessionId: string }) {
 
 // --- Session Card (clickable, expands to show detail) ---
 
-function SessionCard({ session, expanded, onToggle, onExpandSession }: {
+function SessionCard({ session, expanded, onToggle, onExpandSession, onReplay }: {
   session: SessionSummary | SearchResult
   expanded: boolean
   onToggle: () => void
   onExpandSession?: (id: string) => void
+  onReplay: (id: string) => void
 }) {
   const s = session as SessionSummary & SearchResult
   const title = s.nickname || stripTags(s.first_prompt || '') || 'Untitled session'
@@ -319,11 +328,19 @@ function SessionCard({ session, expanded, onToggle, onExpandSession }: {
       aria-expanded={expanded}
     >
       {/* Title row */}
-      <div className="flex items-start gap-2 mb-2">
+      <div className="flex items-start gap-2 mb-2 group/card">
         {s.pinned && <Star size={14} className="text-ax-warning mt-1 shrink-0 fill-current" />}
         <h3 className={`font-serif italic text-h4 text-ax-text-primary flex-1 ${expanded ? '' : 'line-clamp-2'}`}>
           {title}
         </h3>
+        <button
+          className="opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0 mt-0.5 flex items-center gap-1 font-mono text-micro text-ax-brand hover:text-ax-brand/80 px-1.5 py-0.5 rounded border border-ax-brand/40 hover:border-ax-brand"
+          onClick={(e) => { e.stopPropagation(); onReplay(s.id) }}
+          title="Replay session"
+        >
+          <Play size={9} />
+          Replay
+        </button>
         <ChevronDown
           size={16}
           className={`text-ax-text-tertiary shrink-0 mt-1 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
@@ -404,7 +421,7 @@ function SessionCard({ session, expanded, onToggle, onExpandSession }: {
       {/* Expandable detail panel */}
       {expanded && (
         <div onClick={(e) => e.stopPropagation()}>
-          <SessionDetailPanel sessionId={s.id} />
+          <SessionDetailPanel sessionId={s.id} onReplay={onReplay} />
           <PromptTimeline sessionId={s.id} />
           <RelatedSessions sessionId={s.id} projectName={s.project_name} onSelect={onExpandSession || (() => {})} />
         </div>
@@ -564,6 +581,7 @@ function DayViewList({ sessions }: { sessions: SessionSummary[] }) {
   const days = useMemo(() => groupByDay(sessions), [sessions])
   const [expandedDays, setExpandedDays] = useState<Set<string>>(() => new Set(days[0] ? [days[0].date] : []))
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const { openReplay } = useUIStore()
 
   const toggleDay = (date: string) => {
     setExpandedDays(prev => {
@@ -621,6 +639,7 @@ function DayViewList({ sessions }: { sessions: SessionSummary[] }) {
                     expanded={expandedId === s.id}
                     onToggle={() => toggleExpand(s.id)}
                     onExpandSession={navigateToSession}
+                    onReplay={openReplay}
                   />
                 ))}
             </div>
@@ -640,6 +659,7 @@ function ProjectViewList() {
   const { projects, loading } = useSessionsByProject()
   const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const { openReplay } = useUIStore()
 
   const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
 
@@ -678,6 +698,7 @@ function ProjectViewList() {
                     expanded={expandedId === s.id}
                     onToggle={() => toggleExpand(s.id)}
                     onExpandSession={(id) => setExpandedId(id)}
+                    onReplay={openReplay}
                   />
                 ))}
             </div>
@@ -702,6 +723,7 @@ function SessionList({ sessions, indexStatus, loading, error }: {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const { openReplay } = useUIStore()
 
   const { results: searchResults, loading: searchLoading } = useSessionSearch(search)
 
@@ -831,6 +853,7 @@ function SessionList({ sessions, indexStatus, loading, error }: {
               expanded={expandedId === r.id}
               onToggle={() => toggleExpand(r.id)}
               onExpandSession={navigateToSession}
+              onReplay={openReplay}
             />
           ))}
         </div>
@@ -878,6 +901,7 @@ function SessionList({ sessions, indexStatus, loading, error }: {
                       expanded={expandedId === s.id}
                       onToggle={() => toggleExpand(s.id)}
                       onExpandSession={navigateToSession}
+                      onReplay={openReplay}
                     />
                   ))}
                 </div>
@@ -1016,7 +1040,8 @@ export function SessionsView() {
   }, [allSessions, agentFilter])
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       {/* Header bar */}
       <div className="shrink-0 flex items-center gap-2 px-4 py-1 border-b border-ax-border-subtle bg-ax-base">
         {/* View mode tabs (Day / Sessions / Analytics) */}
@@ -1082,6 +1107,8 @@ export function SessionsView() {
           )}
         </div>
       </div>
+      </div>
+      <ReplayPanel />
     </div>
   )
 }
