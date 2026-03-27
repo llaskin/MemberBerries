@@ -39,6 +39,14 @@ export function ReplayPanel() {
 
   const playback = usePlayback(data?.messages ?? [], data?.hasTimestamps ?? false)
 
+  // Auto-start when transcript finishes loading
+  useEffect(() => {
+    if (data && !data.error && !data.unavailable && data.messages.length > 0) {
+      playback.play()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
   const isOpen = Boolean(activeReplayId)
 
   return (
