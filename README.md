@@ -16,6 +16,7 @@
 - **Multi-Agent** — supports Claude Code, Codex, Cursor, and GitHub Copilot
 - **Agent Filter Pills** — toggle between All agents or filter to a specific one
 - **Prompt Timeline** — see the sequence of prompts in each session
+- **Session Replay** — rewatch any Claude Code session with animated character-by-character streaming; hover a session card or open the detail panel and click the play button to open a slide-in replay panel
 - **Redaction** — secrets (API keys, tokens, connection strings) scrubbed before display
 - **Local-First** — all data stays on your machine. No cloud, no accounts.
 

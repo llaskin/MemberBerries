@@ -23,6 +23,7 @@ interface UIStore {
   viewSwipeDirection: 'left' | 'right' | 'none'
   selectedRollup: string | null
   resumeSessionId: string | null
+  activeReplayId: string | null
   toggleSidebar: () => void
   setTheme: (theme: 'light' | 'dark') => void
   toggleTheme: () => void
@@ -31,12 +32,18 @@ interface UIStore {
   goBack: () => void
   openTerminal: (sessionId: string) => void
   clearResumeSession: () => void
+  openReplay: (sessionId: string) => void
+  closeReplay: () => void
 }
 
 function getInitialTheme(): 'light' | 'dark' {
-  const stored = localStorage.getItem('ax-theme')
-  if (stored === 'light' || stored === 'dark') return stored
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  try {
+    const stored = localStorage.getItem('ax-theme')
+    if (stored === 'light' || stored === 'dark') return stored
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -47,6 +54,7 @@ export const useUIStore = create<UIStore>((set) => ({
   viewSwipeDirection: 'none',
   selectedRollup: null,
   resumeSessionId: null,
+  activeReplayId: null,
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setTheme: (theme) => {
     localStorage.setItem('ax-theme', theme)
@@ -64,6 +72,7 @@ export const useUIStore = create<UIStore>((set) => ({
       previousView: s.activeView,
       viewSwipeDirection: getSwipeDir(s.activeView, view),
       selectedRollup: null,
+      activeReplayId: null,
     }
   }),
   openRollup: (filename) => set(s => ({
@@ -90,4 +99,6 @@ export const useUIStore = create<UIStore>((set) => ({
     resumeSessionId: sessionId,
   })),
   clearResumeSession: () => set({ resumeSessionId: null }),
+  openReplay: (sessionId) => set({ activeReplayId: sessionId }),
+  closeReplay: () => set({ activeReplayId: null }),
 }))
