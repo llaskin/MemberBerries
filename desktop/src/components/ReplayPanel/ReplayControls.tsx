@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 
 function formatTime(ms: number): string {
   const s = Math.floor(ms / 1000)

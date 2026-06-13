@@ -40,7 +40,7 @@ export async function fetchPricing(): Promise<Record<string, ModelPricing>> {
   try {
     const res = await fetch(PRICING_URL)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json()
+    const data = await res.json() as Record<string, ModelPricing>
     pricingCache = data
     cacheTimestamp = Date.now()
     return data

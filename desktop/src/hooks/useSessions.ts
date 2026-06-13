@@ -20,6 +20,7 @@ export interface SessionSummary {
   agent: string
   model: string | null
   estimated_total_tokens: number
+  is_sidechain: number
   tags: string[]
   pinned: boolean
   nickname: string | null
@@ -45,12 +46,13 @@ export interface SearchResult {
   modified_at: string | null
   git_branch: string | null
   snippet: string
+  is_sidechain: number
   tags: string[]
   pinned: boolean
   nickname: string | null
 }
 
-export function useSessions(projectName: string | null) {
+export function useSessions(projectName: string | null, includeSidechains = false) {
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [indexStatus, setIndexStatus] = useState<IndexStatus>({ totalSessions: 0, analyticsIndexed: 0, ftsIndexed: 0, ready: false })
   const [loading, setLoading] = useState(true)
@@ -58,9 +60,11 @@ export function useSessions(projectName: string | null) {
 
   const fetchSessions = useCallback(async () => {
     try {
-      const url = projectName
-        ? `/api/mb/sessions?project=${encodeURIComponent(projectName)}`
-        : '/api/mb/sessions'
+      const params = new URLSearchParams()
+      if (projectName) params.set('project', projectName)
+      if (includeSidechains) params.set('includeSidechains', 'true')
+      const qs = params.toString()
+      const url = qs ? `/api/mb/sessions?${qs}` : '/api/mb/sessions'
       const res = await fetch(url)
       const data = await res.json()
       setSessions(data.sessions || [])
@@ -71,7 +75,7 @@ export function useSessions(projectName: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [projectName])
+  }, [projectName, includeSidechains])
 
   useEffect(() => {
     setLoading(true)
@@ -132,7 +136,7 @@ export function usePromptTimeline(sessionId: string | null) {
   return { prompts, loading }
 }
 
-export function useSessionSearch(query: string) {
+export function useSessionSearch(query: string, includeSidechains = false) {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -149,7 +153,8 @@ export function useSessionSearch(query: string) {
 
     timerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/mb/sessions/search?q=${encodeURIComponent(query)}`)
+        const sc = includeSidechains ? '&includeSidechains=true' : ''
+        const res = await fetch(`/api/mb/sessions/search?q=${encodeURIComponent(query)}${sc}`)
         const data = await res.json()
         setResults(data.results || [])
       } catch {
@@ -160,7 +165,7 @@ export function useSessionSearch(query: string) {
     }, 300)
 
     return () => clearTimeout(timerRef.current)
-  }, [query])
+  }, [query, includeSidechains])
 
   return { results, loading }
 }

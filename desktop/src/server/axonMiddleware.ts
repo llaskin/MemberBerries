@@ -2133,14 +2133,15 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         return
       }
 
-      // GET /api/mb/sessions/search?q={query}
-      const sessionSearchMatch = url.match(/^\/api\/mb\/sessions\/search\?q=(.+)$/)
-      if (sessionSearchMatch) {
-        const query = decodeURIComponent(sessionSearchMatch[1])
+      // GET /api/mb/sessions/search?q={query}&includeSidechains={bool}
+      if (url.startsWith('/api/mb/sessions/search?')) {
+        const searchUrlObj = new URL(url, 'http://localhost')
+        const query = searchUrlObj.searchParams.get('q') || ''
+        const includeSidechains = searchUrlObj.searchParams.get('includeSidechains') === 'true'
         try {
           const { searchSessions } = await import('../lib/sessionDb')
           const { getAllSessionMeta } = await import('../lib/sessionMeta')
-          const results = searchSessions(query)
+          const results = searchSessions(query, 50, includeSidechains)
           const meta = getAllSessionMeta()
           const enriched = results.map(r => ({
             ...r,
@@ -2297,10 +2298,11 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
         const urlObj = new URL(url, 'http://localhost')
         const projectName = resolvedProjectName || urlObj.searchParams.get('project') || undefined
         const agentParam = urlObj.searchParams.get('agent') || undefined
+        const includeSidechains = urlObj.searchParams.get('includeSidechains') === 'true'
         try {
           const { getSessions, getIndexStatus } = await import('../lib/sessionDb')
           const { getAllSessionMeta } = await import('../lib/sessionMeta')
-          const sessions = getSessions(projectName, agentParam)
+          const sessions = getSessions(projectName, agentParam, includeSidechains)
           const meta = getAllSessionMeta()
           const enriched = sessions.map(s => ({
             ...s,
@@ -2622,10 +2624,10 @@ export function createAxonMiddleware(config: AxonMiddlewareConfig) {
 /* ── WebSocket upgrade handler ── */
 
 export function handleAxonUpgrade(
-  wss: import('ws').WebSocketServer,
-  req: IncomingMessage,
-  socket: import('stream').Duplex,
-  head: Buffer,
+  _wss: import('ws').WebSocketServer,
+  _req: IncomingMessage,
+  _socket: import('stream').Duplex,
+  _head: Buffer,
   _axonHome?: string,
 ) {
   // Terminal WebSocket handler removed for security — no shell spawning

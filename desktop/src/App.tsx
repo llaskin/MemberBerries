@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react'
-import { Brain, Clock } from 'lucide-react'
+import { Brain } from 'lucide-react'
 import { DataProvider } from '@/providers/DataProvider'
 import { Shell } from '@/components/layout/Shell'
 import { SettingsView } from '@/views/SettingsView'
@@ -26,7 +26,6 @@ import { Component, type ErrorInfo } from 'react'
 // Install global fetch interceptor ONCE — injects auth headers on all /api/mb/* calls
 installAuthInterceptor()
 import { useUIStore, type ViewId } from '@/store/uiStore'
-import { useProjectStore } from '@/store/projectStore'
 
 /* ── Horizontal strip ────────────────────────────────────────── */
 
@@ -112,19 +111,9 @@ function EditorialNav({ activeView }: { activeView: ViewId }) {
 
 /* ── View router ─────────────────────────────────────────────── */
 
-const ALLOWED_UNINITIALIZED = new Set<ViewId>(['onboarding', 'settings', 'terminal', 'genesis-progress', 'source', 'deep-search'])
-
 function ViewRouter() {
   const activeView = useUIStore(s => s.activeView)
-  const setView = useUIStore(s => s.setView)
   const swipeDir = useUIStore(s => s.viewSwipeDirection)
-  const { projects, activeProject } = useProjectStore()
-
-  // Genesis guard disabled — sessions view is always available
-
-  const loading = useProjectStore(s => s.loading)
-  const noProjects = !loading && projects.length === 0
-
   // Strip index tracking
   const stripIdx = STRIP.indexOf(activeView)
   const isStrip = stripIdx >= 0

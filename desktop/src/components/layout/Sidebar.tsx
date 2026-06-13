@@ -5,7 +5,7 @@ import { useProjectStore } from '@/store/projectStore'
 import { useUIStore, type ViewId } from '@/store/uiStore'
 import { useDebugStore } from '@/store/debugStore'
 import { useDiscoveredRepos } from '@/hooks/useDiscoveredRepos'
-import { Clock, Settings, Search, Sun, Moon, Coffee, Plus, Terminal, Brain, PanelLeftClose, PanelLeftOpen, Keyboard, CheckSquare, GitBranch, GripVertical, HelpCircle, X, Globe, EyeOff } from 'lucide-react'
+import { Clock, Settings, Search, Sun, Moon, Plus, Brain, PanelLeftClose, PanelLeftOpen, Keyboard, GripVertical, HelpCircle, X, Globe, EyeOff } from 'lucide-react'
 import { useUpdateChecker } from '@/hooks/useUpdateChecker'
 
 const HINT_STORAGE_KEY = 'mb-shortcut-hints-dismissed'
@@ -38,8 +38,6 @@ export function Sidebar({ onOpenPalette }: { onOpenPalette?: () => void }) {
   const collapsed = !sidebarOpen
 
   const activeProjectData = projects.find(p => p.name === activeProject)
-  const isUninitialized = activeProjectData ? activeProjectData.episodeCount === 0 : false
-
   const activeProjects = projects.filter(p => p.status !== 'archived')
   const archivedProjects = projects.filter(p => p.status === 'archived')
   const [showArchived, setShowArchived] = useState(false)

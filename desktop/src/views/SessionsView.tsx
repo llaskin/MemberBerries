@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useUIStore } from '@/store/uiStore'
-import { useSessions, useSessionSearch, useSessionsByProject, usePromptTimeline, type SessionSummary, type SearchResult } from '@/hooks/useSessions'
+import { useSessions, useSessionSearch, usePromptTimeline, type SessionSummary, type SearchResult } from '@/hooks/useSessions'
 import { Search, GitBranch, MessageSquare, Wrench, DollarSign, Star, ChevronDown, FileText, AlertCircle, Terminal as TerminalIcon, Play } from 'lucide-react'
 import { AGENTS, type AgentId } from '@/lib/agents/types'
 import { ReplayPanel } from '@/components/ReplayPanel'
@@ -148,6 +148,7 @@ interface SessionDetail {
     estimated_output_tokens: number
     tool_calls_json: string | null
     git_commands_json: string | null
+    project_path: string | null
   }
   filesTouched: { file_path: string; operations: string; count: number }[]
 }
@@ -288,15 +289,49 @@ function SessionDetailPanel({ sessionId, onReplay }: { sessionId: string; onRepl
       )}
 
       {/* Session ID + Replay */}
-      <div className="pt-3 border-t border-ax-border-subtle flex items-center justify-between gap-2">
-        <span className="font-mono text-micro text-ax-text-tertiary select-all truncate">{sessionId}</span>
-        <button
-          className="flex items-center gap-1 font-mono text-micro text-ax-brand hover:text-ax-brand/80 px-2 py-1 rounded border border-ax-brand/40 hover:border-ax-brand shrink-0 transition-colors"
-          onClick={() => onReplay(sessionId)}
-        >
-          <Play size={10} />
-          Replay
-        </button>
+      <div className="pt-3 border-t border-ax-border-subtle space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider">Session ID</span>
+            <span
+              className="font-mono text-micro text-ax-text-secondary select-all truncate cursor-pointer hover:text-ax-text-primary"
+              title="Click to copy"
+              onClick={() => copyToClipboard(sessionId)}
+            >
+              {sessionId}
+            </span>
+          </div>
+          <button
+            className="flex items-center gap-1 font-mono text-micro text-ax-brand hover:text-ax-brand/80 px-2 py-1 rounded border border-ax-brand/40 hover:border-ax-brand shrink-0 transition-colors"
+            onClick={() => onReplay(sessionId)}
+          >
+            <Play size={10} />
+            Replay
+          </button>
+        </div>
+
+        {/* Resume command — Claude sessions only */}
+        {s.agent === 'claude' && s.project_path && (
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-micro text-ax-text-tertiary uppercase tracking-wider">
+              Resume from
+            </span>
+            <span
+              className="font-mono text-micro text-ax-text-secondary select-all truncate cursor-pointer hover:text-ax-text-primary"
+              title="Click to copy folder path"
+              onClick={() => copyToClipboard(s.project_path!)}
+            >
+              {s.project_path}
+            </span>
+            <code
+              className="font-mono text-micro text-ax-text-secondary bg-ax-sunken border border-ax-border-subtle rounded px-2 py-1 select-all break-all cursor-pointer hover:border-ax-brand/40"
+              title="Click to copy"
+              onClick={() => copyToClipboard(`cd ${JSON.stringify(s.project_path)} && claude --resume ${sessionId}`)}
+            >
+              cd {s.project_path} && claude --resume {sessionId}
+            </code>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -653,79 +688,21 @@ function DayViewList({ sessions }: { sessions: SessionSummary[] }) {
   )
 }
 
-// --- Project View (groups sessions by project) ---
-
-function ProjectViewList() {
-  const { projects, loading } = useSessionsByProject()
-  const [expandedProject, setExpandedProject] = useState<string | null>(null)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const { openReplay } = useUIStore()
-
-  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
-
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        {[0, 1, 2].map(i => (
-          <div key={i} className="h-20 bg-ax-sunken rounded-xl" />
-        ))}
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {projects.map(project => (
-        <div key={project.projectName}>
-          <button
-            onClick={() => setExpandedProject(expandedProject === project.projectName ? null : project.projectName)}
-            className="w-full p-4 rounded-lg bg-ax-elevated border border-ax-border hover:border-ax-border-strong transition-colors text-left"
-          >
-            <div className="font-serif italic text-h4 text-ax-text-primary">{project.projectName}</div>
-            <div className="font-mono text-micro text-ax-text-ghost mt-0.5 truncate">{project.projectPath}</div>
-            <div className="font-mono text-micro text-ax-text-tertiary mt-1">
-              {project.sessions.length} session{project.sessions.length !== 1 ? 's' : ''} · {formatCost(project.totalCost)} · Last active: {project.lastActive ? timeAgo(project.lastActive) : 'unknown'}
-            </div>
-          </button>
-          {expandedProject === project.projectName && (
-            <div className="mt-2 ml-3 pl-3 border-l-2 border-ax-border-subtle space-y-3">
-              {project.sessions
-                .sort((a, b) => (b.modified_at || '').localeCompare(a.modified_at || ''))
-                .map(s => (
-                  <SessionCard
-                    key={s.id}
-                    session={s}
-                    expanded={expandedId === s.id}
-                    onToggle={() => toggleExpand(s.id)}
-                    onExpandSession={(id) => setExpandedId(id)}
-                    onReplay={openReplay}
-                  />
-                ))}
-            </div>
-          )}
-        </div>
-      ))}
-      {projects.length === 0 && (
-        <p className="text-small text-ax-text-tertiary text-center py-8">No projects found</p>
-      )}
-    </div>
-  )
-}
-
 // --- Session List (editorial column) ---
 
-function SessionList({ sessions, indexStatus, loading, error }: {
+function SessionList({ sessions, indexStatus, loading, error, showSubagents }: {
   sessions: SessionSummary[]
   indexStatus: { totalSessions: number; analyticsIndexed: number; ftsIndexed: number; ready: boolean }
   loading: boolean
   error: string | null
+  showSubagents: boolean
 }) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const { openReplay } = useUIStore()
 
-  const { results: searchResults, loading: searchLoading } = useSessionSearch(search)
+  const { results: searchResults, loading: searchLoading } = useSessionSearch(search, showSubagents)
 
   const isSearching = search.trim().length > 0
 
@@ -914,116 +891,17 @@ function SessionList({ sessions, indexStatus, loading, error }: {
   )
 }
 
-// --- Demo data generator ---
-
-function generateDemoData(): {
-  zones: ZoneState[]
-  tiles: TileState[]
-  sessions: SessionSummary[]
-} {
-  const now = new Date()
-  const hours = (h: number) => new Date(now.getTime() - h * 3600000).toISOString()
-  const days = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
-
-  const makeSession = (
-    id: string, nickname: string, summary: string,
-    msgs: number, tools: number, cost: number,
-    modified: string, branch?: string, pinned?: boolean,
-    heatstrip?: { type: string }[]
-  ): SessionSummary => ({
-    id, project_id: 'demo', project_name: 'axon', project_path: null,
-    first_prompt: nickname, custom_title: null, nickname,
-    heuristic_summary: summary,
-    message_count: msgs, tool_call_count: tools, errors: 0,
-    estimated_cost_usd: cost,
-    git_branch: branch || 'main',
-    heatstrip_json: heatstrip ? JSON.stringify(heatstrip) : null,
-    created_at: modified, modified_at: modified,
-    analytics_indexed: 1, tags: [], pinned: pinned || false,
-  })
-
-  const heat = (types: string[]) => types.map(t => ({ type: t }))
-
-  // Sessions — mix of active, recent, older
-  const demoSessions: SessionSummary[] = [
-    // Active cluster
-    makeSession('demo-1', 'Canvas spatial layout engine', 'Implementing zone-based tile positioning with drag-and-drop, snap-to-grid, and automatic compaction', 47, 89, 1.24, hours(1), 'feat/canvas', true, heat(['edit', 'edit', 'bash', 'read', 'edit', 'write', 'bash', 'edit', 'edit', 'read'])),
-    makeSession('demo-2', 'Morning briefing chat UX', 'Building the Claude-powered morning briefing with streaming SSE, editorial typography, and frosted glass effects', 32, 56, 0.87, hours(2), 'feat/morning', false, heat(['chat', 'edit', 'edit', 'read', 'write', 'edit', 'bash', 'chat'])),
-    makeSession('demo-3', 'Terminal persistence layer', 'WebSocket PTY management, XTerm.js integration, data buffering for view-switch survival', 28, 41, 0.63, hours(3), 'feat/terminal', false, heat(['bash', 'edit', 'read', 'bash', 'write', 'edit', 'bash', 'edit', 'bash'])),
-    makeSession('demo-4', 'Carousel view transitions', 'Three-desktop horizontal slide system with CSS transforms and lazy mounting', 19, 34, 0.52, hours(5), 'feat/carousel', false, heat(['edit', 'edit', 'read', 'edit', 'write'])),
-
-    // Research cluster
-    makeSession('demo-5', 'Explore Tauri v2 migration', 'Investigating portable_pty, plugin-shell, and Tauri event system for native terminal support', 15, 22, 0.31, days(1), 'research/tauri', false, heat(['read', 'read', 'chat', 'read', 'read', 'chat'])),
-    makeSession('demo-6', 'Design system audit', 'Reviewing editorial neural aesthetic, font hierarchy, color semantics, and component patterns', 12, 8, 0.18, days(2), 'main', false, heat(['read', 'read', 'read', 'chat', 'read'])),
-    makeSession('demo-7', 'Plugin architecture RFC', 'Designing the extension system — hooks, lifecycle events, sandboxed execution, and manifest format', 24, 31, 0.45, days(2), 'research/plugins', false, heat(['chat', 'chat', 'edit', 'write', 'read', 'chat', 'edit'])),
-    makeSession('demo-8', 'Agent orchestration patterns', 'Multi-agent coordination, task delegation, context sharing, and output routing strategies', 18, 14, 0.28, days(3), 'research/agents', false, heat(['chat', 'read', 'chat', 'chat', 'read'])),
-
-    // Infra cluster
-    makeSession('demo-9', 'CI/CD pipeline setup', 'GitHub Actions for desktop builds, CLI releases, and cross-platform testing', 21, 45, 0.58, days(1), 'infra/ci', false, heat(['bash', 'write', 'bash', 'edit', 'bash', 'bash', 'read'])),
-    makeSession('demo-10', 'Database schema evolution', 'Session analytics tables, FTS indexing, migration strategy, and query optimization', 16, 27, 0.39, days(4), 'infra/db', false, heat(['edit', 'bash', 'read', 'edit', 'bash'])),
-    makeSession('demo-11', 'Performance profiling', 'Canvas rendering benchmarks, terminal throughput, and memory usage under sustained load', 11, 19, 0.22, days(5), 'main', false, heat(['bash', 'bash', 'read', 'bash'])),
-
-    // Older
-    makeSession('demo-12', 'Initial CLI scaffolding', 'Setting up the Axon CLI — 15 commands, config management, nightly cron, dendrite format', 38, 67, 0.92, days(8), 'main', true, heat(['write', 'edit', 'bash', 'write', 'edit', 'bash', 'write', 'bash'])),
-    makeSession('demo-13', 'Rollup summarization engine', 'Nightly AI rollups from git activity — markdown output, frontmatter, decision extraction', 29, 44, 0.71, days(10), 'main', false, heat(['edit', 'read', 'bash', 'edit', 'write', 'bash'])),
-    makeSession('demo-14', 'Open source licensing review', 'MIT vs Apache 2.0, contributor agreements, monetization compatibility', 8, 3, 0.09, days(12), 'main', false, heat(['chat', 'read', 'chat'])),
-  ]
-
-  // Zones — nicely laid out
-  const GAP = 40
-  const ZONE_W = 3 * (TILE_W + 10) - 10 + 32 // 3 cols of tiles + padding
-
-  const zones: ZoneState[] = [
-    // Row 1: Active work
-    { id: 'demo-zone-active', label: 'Active Sprint', x: 0, y: 0, color: ZONE_COLORS[0] },
-    { id: 'demo-zone-research', label: 'Research', x: snap(ZONE_W + GAP * 2), y: 0, color: ZONE_COLORS[2] },
-
-    // Row 2: Infra + Archive
-    { id: 'demo-zone-infra', label: 'Infrastructure', x: 0, y: snap(4 * (TILE_H + 10) + 80), color: ZONE_COLORS[1] },
-    { id: 'demo-zone-archive', label: 'Archive', x: snap(ZONE_W + GAP * 2), y: snap(4 * (TILE_H + 10) + 80), color: ZONE_COLORS[5] },
-
-    // Sub-zone inside Research
-    { id: 'demo-zone-agents', label: 'Agent Design', x: snap(ZONE_W + GAP * 2 + 16), y: snap(2 * (TILE_H + 10) + 60), color: ZONE_COLORS[3], parentZoneId: 'demo-zone-research' },
-  ]
-
-  const tiles: TileState[] = [
-    // Active Sprint
-    { sessionId: 'demo-1', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-active' },
-    { sessionId: 'demo-2', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-active' },
-    { sessionId: 'demo-3', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-active' },
-    { sessionId: 'demo-4', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-active' },
-
-    // Research
-    { sessionId: 'demo-5', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-research' },
-    { sessionId: 'demo-6', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-research' },
-    { sessionId: 'demo-7', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-research' },
-
-    // Agent Design (sub-zone of Research)
-    { sessionId: 'demo-8', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-agents' },
-
-    // Infrastructure
-    { sessionId: 'demo-9', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-infra' },
-    { sessionId: 'demo-10', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-infra' },
-    { sessionId: 'demo-11', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-infra' },
-
-    // Archive
-    { sessionId: 'demo-12', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-archive' },
-    { sessionId: 'demo-13', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-archive' },
-    { sessionId: 'demo-14', x: 0, y: 0, width: TILE_W, height: TILE_H, zoneId: 'demo-zone-archive' },
-  ]
-
-  return { zones, tiles, sessions: demoSessions }
-}
-
 // --- Main Sessions View ---
 
 export function SessionsView() {
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [agentFilter, setAgentFilter] = useState<string | null>(null)
+  const [showSubagents, setShowSubagents] = useState(false)
   const [installedAgents, setInstalledAgents] = useState<{ id: string; name: string; color: string }[]>([])
 
-  // Always show all sessions — Axon workspace names don't map to session project_name
-  const { sessions: allSessions, indexStatus, loading, error } = useSessions(null)
+  // Always show all sessions — Axon workspace names don't map to session project_name.
+  // Subagent (Task-tool) sessions are hidden by default; the Subagents pill toggles them.
+  const { sessions: allSessions, indexStatus, loading, error } = useSessions(null, showSubagents)
 
   // Fetch installed agents
   useEffect(() => {
@@ -1061,7 +939,7 @@ export function SessionsView() {
           ))}
         </div>
         {/* Agent filter pills (Day/Sessions only) */}
-        {viewMode !== 'analytics' && installedAgents.length > 0 && (
+        {installedAgents.length > 0 && (
           <div className="flex items-center gap-0.5 bg-ax-sunken rounded-md p-0.5">
             <button
               onClick={() => setAgentFilter(null)}
@@ -1081,6 +959,17 @@ export function SessionsView() {
             ))}
           </div>
         )}
+        {/* Subagents toggle — hide/show Task-tool sidechain sessions */}
+        <button
+          onClick={() => setShowSubagents(v => !v)}
+          title={showSubagents ? 'Hide subagent (Task-tool) sessions' : 'Show subagent (Task-tool) sessions'}
+          className={`px-2 py-0.5 font-mono text-[10px] rounded-md transition-colors
+            ${showSubagents
+              ? 'bg-ax-elevated text-ax-text-primary shadow-sm'
+              : 'bg-ax-sunken text-ax-text-tertiary hover:text-ax-text-secondary'}`}
+        >
+          {showSubagents ? 'Subagents shown' : 'Subagents hidden'}
+        </button>
         <h1 className="font-serif italic text-[16px] text-ax-text-primary">
           Agent Sessions
         </h1>
@@ -1100,6 +989,7 @@ export function SessionsView() {
               indexStatus={indexStatus}
               loading={loading}
               error={error}
+              showSubagents={showSubagents}
             />
           )}
           {viewMode === 'day' && (

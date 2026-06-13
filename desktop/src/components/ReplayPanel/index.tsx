@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUIStore } from '@/store/uiStore'
 import { usePlayback } from '@/hooks/usePlayback'
 import { ReplayTranscript } from './ReplayTranscript'

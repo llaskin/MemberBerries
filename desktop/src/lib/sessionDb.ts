@@ -213,13 +213,16 @@ export interface IndexStatus {
   ready: boolean
 }
 
-export function getSessions(projectName?: string, agent?: string): SessionRow[] {
+export function getSessions(projectName?: string, agent?: string, includeSidechains = false): SessionRow[] {
   const db = getSessionDb()
   let sql = 'SELECT * FROM sessions'
   const conditions: string[] = []
   const params: any[] = []
   if (projectName) { conditions.push('project_name = ?'); params.push(projectName) }
   if (agent) { conditions.push('agent = ?'); params.push(agent) }
+  // Exclude subagent (sidechain) sessions dispatched via the Task tool by default,
+  // so the session list shows only resumable main sessions.
+  if (!includeSidechains) { conditions.push('(is_sidechain = 0 OR is_sidechain IS NULL)') }
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ')
   sql += ' ORDER BY modified_at DESC'
   return db.prepare(sql).all(...params) as SessionRow[]
@@ -237,17 +240,19 @@ export function getFilesTouched(sessionId: string): FileTouchedRow[] {
   ).all(sessionId) as FileTouchedRow[]
 }
 
-export function searchSessions(query: string, limit = 50): SearchResult[] {
+export function searchSessions(query: string, limit = 50, includeSidechains = false): SearchResult[] {
   const db = getSessionDb()
+  const sidechainClause = includeSidechains ? '' : 'AND (s.is_sidechain = 0 OR s.is_sidechain IS NULL)'
   return db.prepare(`
     SELECT
       s.id, s.project_name, s.first_prompt, s.heuristic_summary,
       s.message_count, s.tool_call_count, s.estimated_cost_usd,
-      s.heatstrip_json, s.created_at, s.modified_at, s.git_branch,
+      s.heatstrip_json, s.created_at, s.modified_at, s.git_branch, s.is_sidechain,
       snippet(session_fts, 2, '<mark>', '</mark>', '…', 40) as snippet
     FROM session_fts
     JOIN sessions s ON s.id = session_fts.session_id
     WHERE session_fts MATCH ?
+      ${sidechainClause}
     ORDER BY rank
     LIMIT ?
   `).all(query, limit) as SearchResult[]

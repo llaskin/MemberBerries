@@ -6,6 +6,14 @@ MemberBerries is a local-first dashboard for tracking AI coding agent activity a
 
 **Core features:** Agent Sessions (Day/Sessions views) + Analytics (token charts by agent/model).
 
+## Obsidian Vault Context
+
+- Vault root: `/Users/leolaskin/Documents/MyApps`
+- Matching app note: `/Users/leolaskin/Documents/MyApps/MemberBerries/Overview.md`
+- Repo path: `/Users/leolaskin/Development/MemberBerries`
+- Read the vault overview before larger product or UX changes, but treat the codebase and `docs/` as the source of truth because the vault note is currently only a scaffold.
+- If you make meaningful changes to the app purpose, architecture, session ingestion model, analytics model, or security constraints, expand the existing MemberBerries note instead of replacing it.
+
 ## Architecture
 
 ```

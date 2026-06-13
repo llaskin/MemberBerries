@@ -1,9 +1,5 @@
 import { readFileSync, existsSync, statSync } from 'fs'
 
-// Pricing per million tokens (Sonnet 4 as default)
-const INPUT_COST_PER_MTOK = 3
-const OUTPUT_COST_PER_MTOK = 15
-
 export interface ParsedFileTouch {
   path: string
   operations: string[]
@@ -65,10 +61,6 @@ export function toolToOperation(toolName: string): string {
   if (toolName === 'Write') return 'write'
   if (toolName === 'Edit') return 'edit'
   return 'other'
-}
-
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4)
 }
 
 // --- Full JSONL parse (for analytics) ---

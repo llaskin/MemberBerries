@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import type { ContentBlock } from '@/lib/transcriptParser'
 
 const TOOL_COLORS: Record<string, string> = {
